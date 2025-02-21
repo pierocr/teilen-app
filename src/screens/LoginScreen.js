@@ -1,3 +1,4 @@
+// LoginScreen.js
 import React, { useState, useContext } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 import axios from "axios";
@@ -12,13 +13,16 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     try {
       const response = await axios.post(`${API_URL}/auth/login`, { correo, password });
-      login(response.data.token);
+      const { token, user } = response.data; // <<< EXTRAEMOS token Y user
 
-      // 🔹 Resetea la navegación para que "HomeScreen" sea la raíz
-      navigation.reset({
+      // Llamamos a login(token, user)
+      login(token, user);
+
+      // Redirigir a la pantalla de Grupos
+      /*navigation.reset({
         index: 0,
         routes: [{ name: "Grupos" }],
-      });
+      });*/
 
     } catch (error) {
       Alert.alert("Error", "Correo o contraseña incorrectos");
@@ -28,18 +32,18 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Iniciar Sesión</Text>
-      <TextInput 
-        placeholder="Correo" 
-        style={styles.input} 
-        keyboardType="email-address" 
-        autoCapitalize="none" 
-        onChangeText={(text) => setCorreo(text.trim())} 
+      <TextInput
+        placeholder="Correo"
+        style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        onChangeText={(text) => setCorreo(text.trim())}
       />
-      <TextInput 
-        placeholder="Contraseña" 
-        style={styles.input} 
-        secureTextEntry 
-        onChangeText={setPassword} 
+      <TextInput
+        placeholder="Contraseña"
+        style={styles.input}
+        secureTextEntry
+        onChangeText={setPassword}
       />
       <Button title="Ingresar" onPress={handleLogin} />
     </View>
