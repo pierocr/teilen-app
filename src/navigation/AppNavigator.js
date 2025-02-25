@@ -14,8 +14,13 @@ import AmigosScreen from "../screens/AmigosScreen";
 import ActividadScreen from "../screens/ActividadScreen";
 import CuentaScreen from "../screens/CuentaScreen";
 import LoginScreen from "../screens/LoginScreen";
+import AgregarParticipanteScreen from "../screens/AgregarParticipanteScreen";
+
 
 import { AuthContext } from "../context/AuthContext";
+
+// IMPORTAMOS LA NUEVA PANTALLA
+import AgregarGastoScreen from "../screens/AgregarGastoScreen";
 
 export const navigationRef = createNavigationContainerRef();
 
@@ -31,6 +36,20 @@ function HomeStack() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="GrupoDetalle" component={GrupoDetalleScreen} />
+
+      {/* NUEVA RUTA: Agregar Gasto */}
+      <Stack.Screen
+        name="AgregarGasto"
+        component={AgregarGastoScreen}
+        options={{ title: "Agregar Gasto" }}
+      />
+
+      {/* NUEVA RUTA: Agregar Participante ✅ */}
+      <Stack.Screen
+        name="AgregarParticipante"
+        component={AgregarParticipanteScreen}
+        options={{ title: "Agregar Participante" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -61,7 +80,8 @@ export default function AppNavigator() {
               else if (route.name === "Amigos") iconName = "person-add-outline";
               else if (route.name === "Actividad")
                 iconName = "stats-chart-outline";
-              else if (route.name === "Cuenta") iconName = "person-circle-outline";
+              else if (route.name === "Cuenta")
+                iconName = "person-circle-outline";
               return <Ionicons name={iconName} size={size} color={color} />;
             },
             headerShown: false,

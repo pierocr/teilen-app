@@ -44,6 +44,13 @@ export default function HomeScreen({ navigation }) {
   const [nombreGrupoEdit, setNombreGrupoEdit] = useState("");
   const [imagenGrupoEdit, setImagenGrupoEdit] = useState("");
 
+  const formatearMonto = (monto) => {
+    return `$${new Intl.NumberFormat("es-CL", {
+      style: "decimal",
+      maximumFractionDigits: 0,
+    }).format(monto)}`;
+  };
+
   // Obtener los grupos
   const obtenerGrupos = async () => {
     try {
@@ -59,7 +66,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Obtener el balance (ejemplo)
+  // Obtener el balance
   const obtenerBalance = async () => {
     try {
       const resp = await axios.get(`${API_URL}/balance`, {
@@ -70,7 +77,6 @@ export default function HomeScreen({ navigation }) {
       setTotalAFavor(total_a_favor);
       setTotalAdeudado(total_adeudado);
     } catch (error) {
-      // si falla, deja en 0
       console.error("Error obteniendo balance:", error);
     }
   };
@@ -111,7 +117,6 @@ export default function HomeScreen({ navigation }) {
       setModalCrearVisible(false);
 
       Alert.alert("Éxito", "Grupo creado correctamente");
-      // También podrías volver a pedir el balance si lo deseas
       obtenerBalance();
     } catch (error) {
       console.error(error);
@@ -269,7 +274,10 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.groupItemContainer}>
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate("GrupoDetalle", { grupoId: item.id })
+                  navigation.navigate("GrupoDetalle", {
+                    grupoId: item.id,
+                    grupoNombre: item.nombre,
+                  })
                 }
                 style={styles.groupItem}
               >
@@ -284,15 +292,13 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.groupInfo}>
                   <Text style={styles.groupName}>{item.nombre}</Text>
                   <Text style={styles.groupTotal}>
-                    Total: CLP {item.total || 0}
+                    Total: {formatearMonto(item.total || 0)}
                   </Text>
                 </View>
               </TouchableOpacity>
+
               {/* Botones Editar / Eliminar */}
-              <Button
-                title="Editar"
-                onPress={() => abrirModalEditarGrupo(item)}
-              />
+              <Button title="Editar" onPress={() => abrirModalEditarGrupo(item)} />
               <Button
                 title="Eliminar"
                 color="red"
@@ -369,6 +375,14 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* ======== FAB para Agregar Gasto ======== */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate("AgregarGasto")}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -473,5 +487,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 5,
     borderColor: "#ccc",
+  },
+  // FAB
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#03A9F4",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+  fabIcon: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "bold",
   },
 });
