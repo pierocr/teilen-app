@@ -1,5 +1,6 @@
 // HomeScreen.js
 import React, { useEffect, useState, useContext } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -227,7 +228,7 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header (datos de usuario) */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
@@ -369,7 +370,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     padding: 16,
-    paddingTop: Platform.OS === "android" ? 45 : 0,
+   //paddingTop: Platform.OS === "android" ? 45 : 0,
   },
   header: {
     flexDirection: "row",
