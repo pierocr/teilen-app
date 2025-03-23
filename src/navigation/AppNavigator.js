@@ -1,4 +1,3 @@
-// src/navigation/AppNavigator.js
 import React, { useContext } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -14,6 +13,7 @@ import AmigosScreen from "../screens/AmigosScreen";
 import ActividadScreen from "../screens/ActividadScreen";
 import CuentaScreen from "../screens/CuentaScreen";
 import LoginScreen from "../screens/LoginScreen";
+import AmigoDetalleScreen from "../screens/AmigoDetalleScreen";
 
 import { AuthContext } from "../context/AuthContext";
 
@@ -31,6 +31,23 @@ function HomeStack() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="GrupoDetalle" component={GrupoDetalleScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function AmigosStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="AmigosMain"
+        component={AmigosScreen}
+        options={{ title: "Amigos" }}
+      />
+      <Stack.Screen
+        name="AmigoDetalle"
+        component={AmigoDetalleScreen}
+        options={{ title: "Detalle del Amigo" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -59,8 +76,7 @@ export default function AppNavigator() {
               let iconName;
               if (route.name === "Grupos") iconName = "people-outline";
               else if (route.name === "Amigos") iconName = "person-add-outline";
-              else if (route.name === "Actividad")
-                iconName = "stats-chart-outline";
+              else if (route.name === "Actividad") iconName = "stats-chart-outline";
               else if (route.name === "Cuenta") iconName = "person-circle-outline";
               return <Ionicons name={iconName} size={size} color={color} />;
             },
@@ -68,12 +84,11 @@ export default function AppNavigator() {
           })}
         >
           <Tab.Screen name="Grupos" component={HomeStack} />
-          <Tab.Screen name="Amigos" component={AmigosScreen} />
+          <Tab.Screen name="Amigos" component={AmigosStack} />
           <Tab.Screen name="Actividad" component={ActividadScreen} />
           <Tab.Screen name="Cuenta" component={CuentaScreen} />
         </Tab.Navigator>
       ) : (
-        // Si user es null, muestra el Stack con la pantalla de Login
         <AuthStack />
       )}
     </NavigationContainer>

@@ -1,6 +1,7 @@
 // ActividadScreen.js
 import React, { useContext, useState, useEffect } from "react";
 import {
+  View,
   Text,
   StyleSheet,
   FlatList,
@@ -26,7 +27,7 @@ export default function ActividadScreen() {
   const obtenerActividad = async () => {
     try {
       setLoading(true);
-      const resp = await axios.get(`${API_URL}/actividad`, {
+      const resp = await axios.get(`${API_URL}/gastos/actividad`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setActividad(resp.data);
