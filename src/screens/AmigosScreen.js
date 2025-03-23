@@ -16,6 +16,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function AmigosScreen() {
   const { user } = useContext(AuthContext);

@@ -1,6 +1,4 @@
-// HomeScreen.js
 import React, { useEffect, useState, useContext } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -11,41 +9,44 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  Button,
-  Platform,
   TextInput,
   Modal,
+  Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
 
 export default function HomeScreen({ navigation }) {
   const { user } = useContext(AuthContext);
 
-  // Lista de grupos
+  // ====== ESTADOS ======
   const [grupos, setGrupos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Nuevo estado para el balance
   const [balance, setBalance] = useState(0);
   const [totalAFavor, setTotalAFavor] = useState(0);
   const [totalAdeudado, setTotalAdeudado] = useState(0);
 
-  // ============= Crear Grupo =============
   const [modalCrearVisible, setModalCrearVisible] = useState(false);
   const [nombreGrupo, setNombreGrupo] = useState("");
   const [imagenGrupo, setImagenGrupo] = useState("");
 
-  // ============= Editar Grupo =============
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
   const [grupoIdEdit, setGrupoIdEdit] = useState(null);
   const [nombreGrupoEdit, setNombreGrupoEdit] = useState("");
   const [imagenGrupoEdit, setImagenGrupoEdit] = useState("");
 
-  // Obtener los grupos
+  // ====== EFECTOS AL INICIO ======
+  useEffect(() => {
+    obtenerGrupos();
+    obtenerBalance();
+  }, []);
+
+  // ====== FUNCIONES BACKEND ======
   const obtenerGrupos = async () => {
     try {
       setLoading(true);
@@ -60,7 +61,6 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Obtener el balance (ejemplo)
   const obtenerBalance = async () => {
     try {
       const resp = await axios.get(`${API_URL}/balance`, {
@@ -71,25 +71,10 @@ export default function HomeScreen({ navigation }) {
       setTotalAFavor(total_a_favor);
       setTotalAdeudado(total_adeudado);
     } catch (error) {
-      // si falla, deja en 0
       console.error("Error obteniendo balance:", error);
     }
   };
 
-  // Pull to refresh
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await obtenerGrupos();
-    await obtenerBalance();
-    setRefreshing(false);
-  };
-
-  useEffect(() => {
-    obtenerGrupos();
-    obtenerBalance();
-  }, []);
-
-  // Crear Grupo
   const crearGrupo = async () => {
     try {
       if (!nombreGrupo.trim()) {
@@ -99,10 +84,7 @@ export default function HomeScreen({ navigation }) {
 
       const response = await axios.post(
         `${API_URL}/grupos`,
-        {
-          nombre: nombreGrupo,
-          imagen: imagenGrupo,
-        },
+        { nombre: nombreGrupo, imagen: imagenGrupo },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
@@ -112,24 +94,19 @@ export default function HomeScreen({ navigation }) {
       setModalCrearVisible(false);
 
       Alert.alert("Éxito", "Grupo creado correctamente");
-      // También podrías volver a pedir el balance si lo deseas
-      obtenerBalance();
+      obtenerBalance(); // Actualizar balance
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "No se pudo crear el grupo");
     }
   };
 
-  // Confirmar Eliminar Grupo
   const confirmarEliminarGrupo = async (grupoId) => {
     try {
       // Revisar si hay deudas
-      const resumenResp = await axios.get(
-        `${API_URL}/deudas/resumen/${grupoId}`,
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
+      const resumenResp = await axios.get(`${API_URL}/deudas/resumen/${grupoId}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
       const hayDeudas = resumenResp.data.length > 0;
 
       Alert.alert(
@@ -152,7 +129,6 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Eliminar Grupo
   const eliminarGrupo = async (grupoId) => {
     try {
       await axios.delete(`${API_URL}/grupos/${grupoId}`, {
@@ -167,7 +143,6 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Abrir modal para Editar Grupo
   const abrirModalEditarGrupo = (grupo) => {
     setGrupoIdEdit(grupo.id);
     setNombreGrupoEdit(grupo.nombre);
@@ -175,7 +150,6 @@ export default function HomeScreen({ navigation }) {
     setModalEditarVisible(true);
   };
 
-  // Editar Grupo
   const editarGrupo = async () => {
     try {
       if (!nombreGrupoEdit.trim()) {
@@ -185,10 +159,7 @@ export default function HomeScreen({ navigation }) {
 
       await axios.put(
         `${API_URL}/grupos/${grupoIdEdit}`,
-        {
-          nombre: nombreGrupoEdit,
-          imagen: imagenGrupoEdit,
-        },
+        { nombre: nombreGrupoEdit, imagen: imagenGrupoEdit },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
@@ -202,22 +173,28 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Nombre del usuario
+  // ====== FUNCIONES DE UI ======
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await obtenerGrupos();
+    await obtenerBalance();
+    setRefreshing(false);
+  };
+
   const userName = user?.nombre || "Usuario";
 
-  // Formatear numeros con separador de miles
-  const formatNumber = (n) => {
-    return new Intl.NumberFormat("es-CL", {
+  // ====== FORMATEAR BALANCE ======
+  const formatNumber = (num) =>
+    new Intl.NumberFormat("es-CL", {
       style: "decimal",
       maximumFractionDigits: 0,
-    }).format(n);
-  };
+    }).format(num);
 
   const balanceString = formatNumber(balance);
   const aFavorString = formatNumber(totalAFavor);
   const adeudadoString = formatNumber(totalAdeudado);
 
-  // Texto extra creativo
+  // Texto creativo de balance
   let balanceLabel = "";
   if (balance > 0) {
     balanceLabel = `Te deben $${balanceString}`;
@@ -227,24 +204,37 @@ export default function HomeScreen({ navigation }) {
     balanceLabel = "Estás en cero, ¡felicidades!";
   }
 
+  // ====== RENDER ======
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header (datos de usuario) */}
+      {/* Encabezado */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <Text style={styles.welcome}>Bienvenido</Text>
-          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
           <Text style={styles.userPlan}>Basic</Text>
         </View>
-        <Image
-          source={{
-            uri: "https://cdn-icons-png.flaticon.com/512/847/847969.png",
-          }}
-          style={styles.avatar}
-        />
+        <TouchableOpacity>
+  <Image
+    source={{
+      uri:
+        user?.imagen_perfil ||
+        "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+    }}
+    style={styles.avatar}
+  />
+</TouchableOpacity>
       </View>
 
-      {/* Tarjeta de Balance con info creativa */}
+      {/* Tarjeta de Balance */}
       <LinearGradient colors={["#24C6DC", "#514A9D"]} style={styles.balanceCard}>
         <Text style={styles.balanceAmount}>{balanceLabel}</Text>
         <Text style={styles.balanceSecondary}>
@@ -252,23 +242,27 @@ export default function HomeScreen({ navigation }) {
         </Text>
       </LinearGradient>
 
-      {/* Botón para CREAR Grupo */}
-      <Button title="Nuevo Grupo" onPress={() => setModalCrearVisible(true)} />
+      {/* Botón Nuevo Grupo */}
+      <TouchableOpacity
+        style={styles.newGroupButton}
+        onPress={() => setModalCrearVisible(true)}
+      >
+        <Text style={styles.newGroupButtonText}>Nuevo Grupo</Text>
+      </TouchableOpacity>
 
-      {/* Listado de grupos */}
+      {/* Título de Sección */}
       <Text style={styles.sectionTitle}>Grupos</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <FlatList
-          data={grupos}
-          keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          renderItem={({ item }) => (
-            <View style={styles.groupItemContainer}>
-              <TouchableOpacity
+
+      {/* Lista de Grupos */}
+      <FlatList
+        data={grupos}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        renderItem={({ item }) => (
+          <View style={styles.groupItemContainer}>
+            <TouchableOpacity
                 onPress={() =>
                   navigation.navigate("GrupoDetalle", { grupoId: item.id })
                 }
@@ -284,37 +278,43 @@ export default function HomeScreen({ navigation }) {
                 />
                 <View style={styles.groupInfo}>
                   <Text style={styles.groupName}>{item.nombre}</Text>
+
                   <Text style={styles.groupTotal}>
-                    Total: CLP {item.total || 0}
+                    Total: ${Math.round(item.total || 0).toLocaleString("es-CL")}
+                  </Text>
+
+                  <Text style={styles.debtText}>
+                    Debes: ${Math.round(item.monto_adeudado || 0).toLocaleString("es-CL")}
                   </Text>
                 </View>
-              </TouchableOpacity>
-              {/* Botones Editar / Eliminar */}
-              <Button
-                title="Editar"
-                onPress={() => abrirModalEditarGrupo(item)}
-              />
-              <Button
-                title="Eliminar"
-                color="red"
-                onPress={() => confirmarEliminarGrupo(item.id)}
-              />
-            </View>
-          )}
-        />
-      )}
+            </TouchableOpacity>
+            {/* Botones Editar y Eliminar */}
+            <TouchableOpacity
+              style={[styles.actionButton, { marginRight: 8 }]}
+              onPress={() => abrirModalEditarGrupo(item)}
+            >
+              <Text style={styles.actionText}>Editar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
+              onPress={() => confirmarEliminarGrupo(item.id)}
+            >
+              <Text style={[styles.actionText, { color: "#fff" }]}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      />
 
-      {/* Modal CREAR Grupo */}
+      {/* MODAL CREAR GRUPO */}
       <Modal
-        transparent={true}
-        animationType="slide"
+        transparent
         visible={modalCrearVisible}
+        animationType="slide"
         onRequestClose={() => setModalCrearVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Crear nuevo grupo</Text>
-
             <TextInput
               placeholder="Nombre del grupo"
               style={styles.input}
@@ -327,22 +327,24 @@ export default function HomeScreen({ navigation }) {
               value={imagenGrupo}
               onChangeText={setImagenGrupo}
             />
-
-            <Button title="Crear" onPress={crearGrupo} />
-            <Button
-              title="Cancelar"
-              color="red"
+            <TouchableOpacity style={styles.confirmButton} onPress={crearGrupo}>
+              <Text style={styles.confirmButtonText}>Crear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmButton, { backgroundColor: "red" }]}
               onPress={() => setModalCrearVisible(false)}
-            />
+            >
+              <Text style={styles.confirmButtonText}>Cancelar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Modal EDITAR Grupo */}
+      {/* MODAL EDITAR GRUPO */}
       <Modal
-        transparent={true}
-        animationType="slide"
+        transparent
         visible={modalEditarVisible}
+        animationType="slide"
         onRequestClose={() => setModalEditarVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -361,12 +363,15 @@ export default function HomeScreen({ navigation }) {
               onChangeText={setImagenGrupoEdit}
             />
 
-            <Button title="Guardar" onPress={editarGrupo} />
-            <Button
-              title="Cancelar"
-              color="red"
+            <TouchableOpacity style={styles.confirmButton} onPress={editarGrupo}>
+              <Text style={styles.confirmButtonText}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmButton, { backgroundColor: "red" }]}
               onPress={() => setModalEditarVisible(false)}
-            />
+            >
+              <Text style={styles.confirmButtonText}>Cancelar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -374,13 +379,17 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-// ================== ESTILOS ==================
+// ====== ESTILOS ======
 const styles = StyleSheet.create({
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
     padding: 16,
-   //paddingTop: Platform.OS === "android" ? 45 : 0,
   },
   header: {
     flexDirection: "row",
@@ -392,11 +401,7 @@ const styles = StyleSheet.create({
   welcome: { fontSize: 16, color: "#666" },
   userName: { fontSize: 20, fontWeight: "bold" },
   userPlan: { fontSize: 14, color: "#888" },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
   balanceCard: {
     borderRadius: 8,
     padding: 16,
@@ -409,9 +414,18 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginBottom: 4,
   },
-  balanceSecondary: {
+  balanceSecondary: { fontSize: 16, color: "#fff" },
+  newGroupButton: {
+    backgroundColor: "#eee",
+    borderRadius: 8,
+    padding: 12,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  newGroupButtonText: {
     fontSize: 16,
-    color: "#fff",
+    color: "#007aff",
+    fontWeight: "600",
   },
   sectionTitle: {
     fontSize: 18,
@@ -424,9 +438,9 @@ const styles = StyleSheet.create({
   groupItemContainer: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    paddingVertical: 10,
   },
   groupItem: {
     flex: 1,
@@ -450,7 +464,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "green",
   },
-  // Modales
+  actionButton: {
+    backgroundColor: "#eee",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  actionText: {
+    fontSize: 14,
+    color: "#007aff",
+    fontWeight: "600",
+  },
+  // MODALES
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -461,18 +486,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 8,
     padding: 20,
-    elevation: 5,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
+    textAlign: "center",
   },
   input: {
     borderWidth: 1,
+    borderColor: "#ccc",
     padding: 10,
     marginBottom: 10,
-    borderRadius: 5,
-    borderColor: "#ccc",
+    borderRadius: 6,
   },
+  debtText: {
+    color: "#E53935", // rojo suave
+    fontSize: 14,
+    marginTop: 2,
+  },  
+  confirmButton: {
+    backgroundColor: "#007aff",
+    padding: 10,
+    borderRadius: 6,
+    marginTop: 5,
+    alignItems: "center",
+  },
+  confirmButtonText: { color: "#fff", fontWeight: "600" },
 });
