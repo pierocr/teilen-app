@@ -1,4 +1,3 @@
-// GrupoDetalleScreen.js
 import React, { useEffect, useState, useContext } from "react";
 import {
   View,
@@ -7,304 +6,301 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Button,
-  Modal,
-  TextInput,
+  Switch,
+  TouchableOpacity,
 } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import API_URL from "../config";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function GrupoDetalleScreen({ route }) {
-  const { grupoId } = route.params;
+const iconosCategorias = {
+  comida: "fast-food-outline",
+  transporte: "car-outline",
+  entretenimiento: "film-outline",
+  compras: "cart-outline",
+  otros: "help-circle-outline",
+};
+
+export default function GrupoDetalleScreen({ route, navigation }) {
+  const { grupoId, grupoNombre = "Grupo" } = route.params;
   const { user } = useContext(AuthContext);
+  const usuarioActual = user?.id;
 
-  // Lista de gastos en el grupo
   const [gastos, setGastos] = useState([]);
+  const [deudas, setDeudas] = useState([]);
+  const [participantes, setParticipantes] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // ============= Crear Gasto =============
-  const [modalCrearVisible, setModalCrearVisible] = useState(false);
-  const [montoNuevo, setMontoNuevo] = useState("");
-  const [descNuevo, setDescNuevo] = useState("");
-
-  // ============= Editar Gasto =============
-  const [modalEditarVisible, setModalEditarVisible] = useState(false);
-  const [gastoIdEdit, setGastoIdEdit] = useState(null);
-  const [montoEdit, setMontoEdit] = useState("");
-  const [descEdit, setDescEdit] = useState("");
-
-  // Aquí asumiré que `user.id` y un usuario extra (id=2) son parte del grupo.
-  const [usuariosGrupo, setUsuariosGrupo] = useState([user.id, 2]);
+  const [mostrarSoloMisDeudas, setMostrarSoloMisDeudas] = useState(false);
 
   useEffect(() => {
-    obtenerGastos();
+    obtenerDatosGrupo();
+    obtenerParticipantes();
+    navigation.setOptions({ title: "Detalle" });
   }, []);
 
-  const obtenerGastos = async () => {
+  const formatearMonto = (monto) => {
+    return `$${new Intl.NumberFormat("es-CL", {
+      style: "decimal",
+      maximumFractionDigits: 0,
+    }).format(monto)}`;
+  };
+
+  const obtenerDatosGrupo = async () => {
     try {
-      const response = await axios.get(`${API_URL}/gastos/${grupoId}`, {
+      setLoading(true);
+      const responseGastos = await axios.get(`${API_URL}/gastos/${grupoId}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      setGastos(response.data);
+      setGastos(responseGastos.data || []);
+
+      const responseDeudas = await axios.get(`${API_URL}/deudas/desglose/${grupoId}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+
+      setDeudas(Array.isArray(responseDeudas.data.resultado) ? responseDeudas.data.resultado : []);
     } catch (error) {
-      console.error("❌ Error obteniendo gastos:", error);
-      Alert.alert("Error", "No se pudieron obtener los gastos.");
+      console.error("❌ Error obteniendo datos del grupo:", error);
+      Alert.alert("Error", "No se pudieron obtener los datos.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Crear Gasto
-  const crearGasto = async () => {
-    if (!montoNuevo.trim() || !descNuevo.trim()) {
-      Alert.alert("Error", "Todos los campos son obligatorios");
-      return;
-    }
-
+  const obtenerParticipantes = async () => {
     try {
-      const montoNumber = parseFloat(montoNuevo);
-      if (isNaN(montoNumber) || montoNumber <= 0) {
-        Alert.alert("Error", "El monto debe ser un número mayor a 0");
-        return;
-      }
-
-      await axios.post(
-        `${API_URL}/gastos`,
-        {
-          id_grupo: grupoId,
-          monto: montoNumber,
-          descripcion: descNuevo,
-          pagado_por: user.id,
-          id_usuarios: usuariosGrupo,
-        },
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
-
-      Alert.alert("Éxito", "Gasto creado correctamente");
-      setModalCrearVisible(false);
-      setMontoNuevo("");
-      setDescNuevo("");
-      obtenerGastos();
-    } catch (error) {
-      console.error("❌ Error creando gasto:", error);
-      Alert.alert("Error", "No se pudo crear el gasto");
-    }
-  };
-
-  // Eliminar Gasto
-  const confirmarEliminarGasto = (gastoId) => {
-    Alert.alert(
-      "Eliminar Gasto",
-      "¿Estás seguro que deseas eliminar este gasto?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => eliminarGasto(gastoId),
-        },
-      ]
-    );
-  };
-
-  const eliminarGasto = async (gastoId) => {
-    try {
-      await axios.delete(`${API_URL}/gastos/${gastoId}`, {
+      const response = await axios.get(`${API_URL}/grupos/${grupoId}/participantes`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      Alert.alert("Éxito", "Gasto eliminado");
-      obtenerGastos();
+
+      setParticipantes(response.data || []);
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "No se pudo eliminar el gasto");
-    }
-  };
-
-  // Editar Gasto
-  const abrirModalEditar = (gasto) => {
-    setGastoIdEdit(gasto.id);
-    setMontoEdit(gasto.monto.toString());
-    setDescEdit(gasto.descripcion);
-    setModalEditarVisible(true);
-  };
-
-  const editarGasto = async () => {
-    if (!montoEdit.trim() || !descEdit.trim()) {
-      Alert.alert("Error", "Todos los campos son obligatorios");
-      return;
-    }
-
-    try {
-      const montoNumber = parseFloat(montoEdit);
-      if (isNaN(montoNumber) || montoNumber <= 0) {
-        Alert.alert("Error", "El monto debe ser mayor que 0");
-        return;
-      }
-
-      await axios.put(
-        `${API_URL}/gastos/${gastoIdEdit}`,
-        {
-          monto: montoNumber,
-          descripcion: descEdit,
-          pagado_por: user.id, // Por simplicidad, no cambia pagador
-        },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      Alert.alert("Éxito", "Gasto editado");
-      setModalEditarVisible(false);
-      obtenerGastos();
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "No se pudo editar el gasto");
+      console.error("❌ Error obteniendo participantes:", error);
+      Alert.alert("Error", "No se pudieron cargar los participantes.");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Detalle del Grupo #{grupoId}</Text>
+      <Text style={styles.title}>{grupoNombre}</Text>
 
-      {/* Botón "Nuevo Gasto" con margen */}
-      <View style={{ marginTop: 20 }}>
-        <Button title="Nuevo Gasto" onPress={() => setModalCrearVisible(true)} />
-      </View>
+      <TouchableOpacity
+        style={styles.agregarButton}
+        onPress={() => navigation.navigate("AgregarParticipante", { grupoId })}
+      >
+        <Text style={styles.agregarText}>+ Agregar Participante</Text>
+      </TouchableOpacity>
 
+      <Text style={styles.sectionTitle}>Participantes</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
-      ) : gastos.length === 0 ? (
-        <Text style={styles.noData}>No hay gastos en este grupo.</Text>
       ) : (
         <FlatList
-          data={gastos}
+          data={participantes}
           keyExtractor={(item) => item.id.toString()}
-          style={{ marginTop: 10 }} // separa la lista de arriba
           renderItem={({ item }) => (
-            <View style={styles.gastoItemContainer}>
-              <Text style={styles.gastoItem}>
-                {item.descripcion}: CLP {item.monto}
-              </Text>
-              <Button title="Editar" onPress={() => abrirModalEditar(item)} />
-              <Button
-                title="Eliminar"
-                color="red"
-                onPress={() => confirmarEliminarGasto(item.id)}
-              />
+            <View style={styles.card}>
+              <Text style={styles.participantName}>{item.nombre}</Text>
+              <Text style={styles.participantEmail}>{item.correo}</Text>
             </View>
           )}
         />
       )}
 
-      {/* Modal CREAR Gasto */}
-      <Modal
-        visible={modalCrearVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalCrearVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Nuevo Gasto</Text>
+      <View style={styles.switchContainer}>
+        <Text style={styles.switchLabel}>Mostrar solo mis deudas</Text>
+        <Switch
+          value={mostrarSoloMisDeudas}
+          onValueChange={() => setMostrarSoloMisDeudas(!mostrarSoloMisDeudas)}
+        />
+      </View>
 
-            <TextInput
-              placeholder="Descripción"
-              style={styles.input}
-              value={descNuevo}
-              onChangeText={setDescNuevo}
-            />
-            <TextInput
-              placeholder="Monto"
-              style={styles.input}
-              keyboardType="numeric"
-              value={montoNuevo}
-              onChangeText={setMontoNuevo}
-            />
+      <Text style={styles.sectionTitle}>Gastos</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <FlatList
+          data={gastos}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => {
+            if (!usuarioActual) return null;
+            const esPagador = item.pagado_por === usuarioActual;
+            const textoEstado = esPagador
+              ? "Tú pagaste"
+              : `Debes ${formatearMonto(item.monto)}`;
+            const colorTexto = esPagador ? "#1b873e" : "#d11a2a";
 
-            <Button title="Crear" onPress={crearGasto} />
-            <Button
-              title="Cancelar"
-              onPress={() => setModalCrearVisible(false)}
-              color="red"
-            />
-          </View>
-        </View>
-      </Modal>
+            return (
+              <View
+                style={[
+                  styles.card,
+                  { backgroundColor: esPagador ? "#f2fef3" : "#fef2f2" },
+                ]}
+              >
+                <View style={styles.row}>
+                  <Ionicons
+                    name={iconosCategorias[item.categoria] || "help-circle-outline"}
+                    size={24}
+                    color="#555"
+                    style={{ marginRight: 10 }}
+                  />
+                  <View>
+                    <Text style={styles.descripcion}>
+                      {item.descripcion}: {formatearMonto(item.monto)}
+                    </Text>
+                    <Text style={styles.pagadoPor}>
+                      Pagado por: {item.pagado_por_nombre}
+                    </Text>
+                    <Text style={[styles.estadoTexto, { color: colorTexto }]}>
+                      {textoEstado}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }}
+        />
+      )}
 
-      {/* Modal EDITAR Gasto */}
-      <Modal
-        visible={modalEditarVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalEditarVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Editar Gasto</Text>
-
-            <TextInput
-              placeholder="Descripción"
-              style={styles.input}
-              value={descEdit}
-              onChangeText={setDescEdit}
-            />
-            <TextInput
-              placeholder="Monto"
-              style={styles.input}
-              keyboardType="numeric"
-              value={montoEdit}
-              onChangeText={setMontoEdit}
-            />
-
-            <Button title="Guardar" onPress={editarGasto} />
-            <Button
-              title="Cancelar"
-              onPress={() => setModalEditarVisible(false)}
-              color="red"
-            />
-          </View>
-        </View>
-      </Modal>
+      <Text style={styles.sectionTitle}>Deudas</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <FlatList
+          data={
+            Array.isArray(deudas)
+              ? deudas.filter((d) => !mostrarSoloMisDeudas || d.deudor_id === user.id)
+              : []
+          }
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.deudaTexto}>
+                {item.deudor_nombre} → {item.acreedor_nombre}:{" "}
+                <Text style={styles.monto}>{formatearMonto(item.monto_total)}</Text>
+              </Text>
+            </View>
+          )}
+        />
+      )}
+      <TouchableOpacity
+  style={styles.fab}
+  onPress={() =>
+    navigation.navigate("CrearGasto", {
+      grupoId,
+      grupoNombre,
+      participantes,
+    })
+  }
+>
+  <Ionicons name="add" size={28} color="#fff" />
+</TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-  noData: { fontSize: 16, color: "gray", textAlign: "center", marginTop: 20 },
-  gastoItemContainer: {
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#fff",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "600",
+    marginBottom: 12,
+    textAlign: "center",
+    color: "#333",
+  },
+  agregarButton: {
+    backgroundColor: "#2a5298",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  agregarText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 20,
+    marginBottom: 8,
+    color: "#444",
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    paddingBottom: 5,
   },
-  gastoItem: {
-    flex: 1,
-    fontSize: 16,
+  descripcion: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
   },
-  // Modales
-  modalOverlay: {
+  pagadoPor: {
+    fontSize: 13,
+    color: "#777",
+  },
+  estadoTexto: {
+    fontWeight: "bold",
+    fontSize: 14,
+    marginTop: 4,
+  },
+  deudaTexto: {
+    fontSize: 15,
+    color: "#333",
+  },
+  monto: {
+    color: "#d11a2a",
+    fontWeight: "600",
+  },
+  participantName: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+  },
+  participantEmail: {
+    fontSize: 13,
+    color: "#777",
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  switchLabel: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    fontSize: 15,
+    color: "#444",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "#2a5298",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
-  },
-  modalContainer: {
-    margin: 20,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.5,
     elevation: 5,
-  },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  input: {
-    borderWidth: 1,
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-    borderColor: "#ccc",
   },
 });

@@ -1,4 +1,3 @@
-// ActividadScreen.js
 import React, { useContext, useState, useEffect } from "react";
 import {
   View,
@@ -13,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
+import { Ionicons } from "@expo/vector-icons";
+import format from "../utils/format";
 
 export default function ActividadScreen() {
   const { user } = useContext(AuthContext);
@@ -45,49 +46,42 @@ export default function ActividadScreen() {
     setRefreshing(false);
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </SafeAreaView>
-    );
-  }
-
-  if (actividad.length === 0 && !loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Actividad</Text>
-        <Text>No hay transacciones asociadas a tu usuario.</Text>
-      </SafeAreaView>
-    );
-  }
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <Ionicons name="cash-outline" size={24} color="#2a5298" style={styles.icon} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.descripcion}>{item.descripcion}</Text>
+          <Text style={styles.monto}>Monto: ${format.monto(item.monto)}</Text>
+          <Text style={styles.subText}>Grupo: {item.nombre_grupo}</Text>
+          <Text style={styles.subText}>Pagado por: {item.nombre_pagador}</Text>
+          <Text style={styles.fecha}>{format.fecha(item.creado_en)}</Text>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Actividad</Text>
-      <FlatList
-        data={actividad}
-        keyExtractor={(item) => item.gasto_id.toString()}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.itemContainer}>
-            <Text style={styles.itemText}>
-              {item.descripcion} | Monto: CLP {item.monto}
-            </Text>
-            <Text style={styles.subText}>
-              Grupo: {item.nombre_grupo} | Pagado por: {item.nombre_pagador}
-            </Text>
-            <Text style={styles.subText}>
-              Fecha: {new Date(item.creado_en).toLocaleString()}
-            </Text>
-          </View>
-        )}
-        ListFooterComponent={() =>
-          loading ? <ActivityIndicator size="small" color="#0000ff" /> : null
-        }
-      />
+
+      {loading && !refreshing ? (
+        <ActivityIndicator size="large" color="#2a5298" />
+      ) : actividad.length === 0 ? (
+        <Text style={styles.empty}>No hay transacciones asociadas a tu usuario.</Text>
+      ) : (
+        <FlatList
+          data={actividad}
+          keyExtractor={(item) => item.gasto_id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          renderItem={renderItem}
+          ListFooterComponent={() =>
+            loading ? <ActivityIndicator size="small" color="#2a5298" /> : null
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -96,27 +90,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    justifyContent: "flex-start",
     backgroundColor: "#fff",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: "600",
     textAlign: "center",
+    marginBottom: 16,
+    color: "#333",
   },
-  itemContainer: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 8,
-  },
-  itemText: {
+  empty: {
     fontSize: 16,
-    fontWeight: "bold",
+    color: "#777",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  icon: {
+    marginRight: 12,
+    marginTop: 4,
+  },
+  descripcion: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  monto: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#2a5298",
   },
   subText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
+  },
+  fecha: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 4,
   },
 });

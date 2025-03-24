@@ -1,28 +1,27 @@
 import React, { useEffect, useState, useContext } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
   FlatList,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
   Alert,
   RefreshControl,
-  TextInput,
-  Modal,
-  Platform,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
 
+import BalanceCard from "../components/BalanceCard";
+import GrupoItem from "../components/GrupoItem";
+import CrearGrupoModal from "../components/CrearGrupoModal";
+import EditarGrupoModal from "../components/EditarGrupoModal";
+
 export default function HomeScreen({ navigation }) {
   const { user } = useContext(AuthContext);
 
-  // ====== ESTADOS ======
   const [grupos, setGrupos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,22 +30,22 @@ export default function HomeScreen({ navigation }) {
   const [totalAFavor, setTotalAFavor] = useState(0);
   const [totalAdeudado, setTotalAdeudado] = useState(0);
 
+  // Modal Crear
   const [modalCrearVisible, setModalCrearVisible] = useState(false);
   const [nombreGrupo, setNombreGrupo] = useState("");
   const [imagenGrupo, setImagenGrupo] = useState("");
 
+  // Modal Editar
   const [modalEditarVisible, setModalEditarVisible] = useState(false);
   const [grupoIdEdit, setGrupoIdEdit] = useState(null);
   const [nombreGrupoEdit, setNombreGrupoEdit] = useState("");
   const [imagenGrupoEdit, setImagenGrupoEdit] = useState("");
 
-  // ====== EFECTOS AL INICIO ======
   useEffect(() => {
     obtenerGrupos();
     obtenerBalance();
   }, []);
 
-  // ====== FUNCIONES BACKEND ======
   const obtenerGrupos = async () => {
     try {
       setLoading(true);
@@ -63,10 +62,10 @@ export default function HomeScreen({ navigation }) {
 
   const obtenerBalance = async () => {
     try {
-      const resp = await axios.get(`${API_URL}/balance`, {
+      const response = await axios.get(`${API_URL}/balance`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      const { balance, total_a_favor, total_adeudado } = resp.data;
+      const { balance, total_a_favor, total_adeudado } = response.data;
       setBalance(balance);
       setTotalAFavor(total_a_favor);
       setTotalAdeudado(total_adeudado);
@@ -89,57 +88,51 @@ export default function HomeScreen({ navigation }) {
       );
 
       setGrupos([...grupos, response.data]);
+      setModalCrearVisible(false);
       setNombreGrupo("");
       setImagenGrupo("");
-      setModalCrearVisible(false);
-
+      obtenerBalance();
       Alert.alert("Éxito", "Grupo creado correctamente");
-      obtenerBalance(); // Actualizar balance
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "No se pudo crear el grupo");
     }
   };
 
-  const confirmarEliminarGrupo = async (grupoId) => {
+  const eliminarGrupo = async (id) => {
     try {
-      // Revisar si hay deudas
-      const resumenResp = await axios.get(`${API_URL}/deudas/resumen/${grupoId}`, {
+      await axios.delete(`${API_URL}/grupos/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      const hayDeudas = resumenResp.data.length > 0;
+      obtenerGrupos();
+      obtenerBalance();
+      Alert.alert("Éxito", "Grupo eliminado correctamente");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "No se pudo eliminar el grupo.");
+    }
+  };
+
+  const confirmarEliminarGrupo = async (id) => {
+    try {
+      const resumen = await axios.get(`${API_URL}/deudas/resumen/${id}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const tieneDeudas = resumen.data.length > 0;
 
       Alert.alert(
         "Eliminar Grupo",
-        hayDeudas
-          ? "Este grupo tiene deudas pendientes. ¿Deseas eliminarlo y liquidar todas las deudas?"
+        tieneDeudas
+          ? "Este grupo tiene deudas pendientes. ¿Deseas eliminarlo y liquidarlas?"
           : "¿Estás seguro que deseas eliminar este grupo?",
         [
           { text: "Cancelar", style: "cancel" },
-          {
-            text: "Eliminar",
-            style: "destructive",
-            onPress: () => eliminarGrupo(grupoId),
-          },
+          { text: "Eliminar", style: "destructive", onPress: () => eliminarGrupo(id) },
         ]
       );
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "No se pudo verificar las deudas del grupo.");
-    }
-  };
-
-  const eliminarGrupo = async (grupoId) => {
-    try {
-      await axios.delete(`${API_URL}/grupos/${grupoId}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
-      Alert.alert("Éxito", "Grupo eliminado correctamente");
-      obtenerGrupos();
-      obtenerBalance();
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "No se pudo eliminar el grupo.");
+      Alert.alert("Error", "No se pudo verificar las deudas.");
     }
   };
 
@@ -163,17 +156,16 @@ export default function HomeScreen({ navigation }) {
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
-      Alert.alert("Éxito", "Grupo actualizado");
       setModalEditarVisible(false);
       obtenerGrupos();
       obtenerBalance();
+      Alert.alert("Éxito", "Grupo actualizado");
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "No se pudo editar el grupo.");
     }
   };
 
-  // ====== FUNCIONES DE UI ======
   const onRefresh = async () => {
     setRefreshing(true);
     await obtenerGrupos();
@@ -181,248 +173,110 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   };
 
-  const userName = user?.nombre || "Usuario";
-
-  // ====== FORMATEAR BALANCE ======
-  const formatNumber = (num) =>
-    new Intl.NumberFormat("es-CL", {
-      style: "decimal",
-      maximumFractionDigits: 0,
-    }).format(num);
-
-  const balanceString = formatNumber(balance);
-  const aFavorString = formatNumber(totalAFavor);
-  const adeudadoString = formatNumber(totalAdeudado);
-
-  // Texto creativo de balance
-  let balanceLabel = "";
-  if (balance > 0) {
-    balanceLabel = `Te deben $${balanceString}`;
-  } else if (balance < 0) {
-    balanceLabel = `Debes $${formatNumber(Math.abs(balance))}`;
-  } else {
-    balanceLabel = "Estás en cero, ¡felicidades!";
-  }
-
-  // ====== RENDER ======
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </SafeAreaView>
-    );
-  }
+  const irADetalleGrupo = (grupoId) => {
+    navigation.navigate("GrupoDetalle", { grupoId });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Encabezado */}
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.userInfo}>
+        <View>
           <Text style={styles.welcome}>Bienvenido</Text>
           <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
           <Text style={styles.userPlan}>Basic</Text>
         </View>
-        <TouchableOpacity>
-  <Image
-    source={{
-      uri:
-        user?.imagen_perfil ||
-        "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-    }}
-    style={styles.avatar}
-  />
-</TouchableOpacity>
+        <Image
+          source={{
+            uri:
+              user?.imagen_perfil ||
+              "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+          }}
+          style={styles.avatar}
+        />
       </View>
 
-      {/* Tarjeta de Balance */}
-      <LinearGradient colors={["#24C6DC", "#514A9D"]} style={styles.balanceCard}>
-        <Text style={styles.balanceAmount}>{balanceLabel}</Text>
-        <Text style={styles.balanceSecondary}>
-          A favor: ${aFavorString} | Adeudado: ${adeudadoString}
-        </Text>
-      </LinearGradient>
+      {/* Balance */}
+      <BalanceCard
+        balance={balance}
+        totalAFavor={totalAFavor}
+        totalAdeudado={totalAdeudado}
+      />
 
       {/* Botón Nuevo Grupo */}
-      <TouchableOpacity
-        style={styles.newGroupButton}
-        onPress={() => setModalCrearVisible(true)}
-      >
-        <Text style={styles.newGroupButtonText}>Nuevo Grupo</Text>
+      <TouchableOpacity style={styles.botonNuevoGrupo} onPress={() => setModalCrearVisible(true)}>
+        <Text style={styles.textoBotonNuevoGrupo}>+ Nuevo Grupo</Text>
       </TouchableOpacity>
 
-      {/* Título de Sección */}
+
+      {/* Título sección */}
       <Text style={styles.sectionTitle}>Grupos</Text>
 
-      {/* Lista de Grupos */}
+      {/* Lista de grupos */}
       <FlatList
         data={grupos}
         keyExtractor={(item) => item.id.toString()}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
-          <View style={styles.groupItemContainer}>
-            <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("GrupoDetalle", { grupoId: item.id })
-                }
-                style={styles.groupItem}
-              >
-                <Image
-                  source={{
-                    uri:
-                      item.imagen ||
-                      "https://cdn-icons-png.flaticon.com/512/3207/3207611.png",
-                  }}
-                  style={styles.groupImage}
-                />
-                <View style={styles.groupInfo}>
-                  <Text style={styles.groupName}>{item.nombre}</Text>
-
-                  <Text style={styles.groupTotal}>
-                    Total: ${Math.round(item.total || 0).toLocaleString("es-CL")}
-                  </Text>
-
-                  <Text style={styles.debtText}>
-                    Debes: ${Math.round(item.monto_adeudado || 0).toLocaleString("es-CL")}
-                  </Text>
-                </View>
-            </TouchableOpacity>
-            {/* Botones Editar y Eliminar */}
-            <TouchableOpacity
-              style={[styles.actionButton, { marginRight: 8 }]}
-              onPress={() => abrirModalEditarGrupo(item)}
-            >
-              <Text style={styles.actionText}>Editar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
-              onPress={() => confirmarEliminarGrupo(item.id)}
-            >
-              <Text style={[styles.actionText, { color: "#fff" }]}>Eliminar</Text>
-            </TouchableOpacity>
-          </View>
+          <GrupoItem
+            grupo={item}
+            onPress={irADetalleGrupo}
+            onEditar={abrirModalEditarGrupo}
+            onEliminar={confirmarEliminarGrupo}
+          />
         )}
       />
 
-      {/* MODAL CREAR GRUPO */}
-      <Modal
-        transparent
+      {/* Modal Crear */}
+      <CrearGrupoModal
         visible={modalCrearVisible}
-        animationType="slide"
-        onRequestClose={() => setModalCrearVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Crear nuevo grupo</Text>
-            <TextInput
-              placeholder="Nombre del grupo"
-              style={styles.input}
-              value={nombreGrupo}
-              onChangeText={setNombreGrupo}
-            />
-            <TextInput
-              placeholder="URL de imagen (opcional)"
-              style={styles.input}
-              value={imagenGrupo}
-              onChangeText={setImagenGrupo}
-            />
-            <TouchableOpacity style={styles.confirmButton} onPress={crearGrupo}>
-              <Text style={styles.confirmButtonText}>Crear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: "red" }]}
-              onPress={() => setModalCrearVisible(false)}
-            >
-              <Text style={styles.confirmButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setModalCrearVisible(false)}
+        onCreate={crearGrupo}
+        nombreGrupo={nombreGrupo}
+        imagenGrupo={imagenGrupo}
+        setNombreGrupo={setNombreGrupo}
+        setImagenGrupo={setImagenGrupo}
+      />
 
-      {/* MODAL EDITAR GRUPO */}
-      <Modal
-        transparent
+      {/* Modal Editar */}
+      <EditarGrupoModal
         visible={modalEditarVisible}
-        animationType="slide"
-        onRequestClose={() => setModalEditarVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Editar grupo</Text>
-            <TextInput
-              placeholder="Nombre del grupo"
-              style={styles.input}
-              value={nombreGrupoEdit}
-              onChangeText={setNombreGrupoEdit}
-            />
-            <TextInput
-              placeholder="URL de imagen (opcional)"
-              style={styles.input}
-              value={imagenGrupoEdit}
-              onChangeText={setImagenGrupoEdit}
-            />
-
-            <TouchableOpacity style={styles.confirmButton} onPress={editarGrupo}>
-              <Text style={styles.confirmButtonText}>Guardar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: "red" }]}
-              onPress={() => setModalEditarVisible(false)}
-            >
-              <Text style={styles.confirmButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setModalEditarVisible(false)}
+        onSave={editarGrupo}
+        nombreGrupo={nombreGrupoEdit}
+        imagenGrupo={imagenGrupoEdit}
+        setNombreGrupo={setNombreGrupoEdit}
+        setImagenGrupo={setImagenGrupoEdit}
+      />
     </SafeAreaView>
   );
 }
 
-// ====== ESTILOS ======
 const styles = StyleSheet.create({
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
-  userInfo: {},
   welcome: { fontSize: 16, color: "#666" },
-  userName: { fontSize: 20, fontWeight: "bold" },
+  nombreUsuario: { fontSize: 20, fontWeight: "bold" },
   userPlan: { fontSize: 14, color: "#888" },
   avatar: { width: 50, height: 50, borderRadius: 25 },
-  balanceCard: {
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 20,
-    alignItems: "flex-start",
-  },
-  balanceAmount: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 4,
-  },
-  balanceSecondary: { fontSize: 16, color: "#fff" },
-  newGroupButton: {
-    backgroundColor: "#eee",
+  nuevoGrupo: {
+    backgroundColor: "#2a5298",
     borderRadius: 8,
     padding: 12,
     alignItems: "center",
     marginBottom: 12,
   },
-  newGroupButtonText: {
+  nuevoGrupoTexto: {
     fontSize: 16,
     color: "#007aff",
     fontWeight: "600",
@@ -435,82 +289,21 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ccc",
     paddingBottom: 4,
   },
-  groupItemContainer: {
-    flexDirection: "row",
+  botonNuevoGrupo: {
+    backgroundColor: "#2a5298",
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  groupItem: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  groupImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  groupInfo: {
-    flexDirection: "column",
-  },
-  groupName: {
+  textoBotonNuevoGrupo: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
-  groupTotal: {
-    fontSize: 14,
-    color: "green",
-  },
-  actionButton: {
-    backgroundColor: "#eee",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  actionText: {
-    fontSize: 14,
-    color: "#007aff",
-    fontWeight: "600",
-  },
-  // MODALES
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-  },
-  modalContainer: {
-    margin: 20,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 6,
-  },
-  debtText: {
-    color: "#E53935", // rojo suave
-    fontSize: 14,
-    marginTop: 2,
-  },  
-  confirmButton: {
-    backgroundColor: "#007aff",
-    padding: 10,
-    borderRadius: 6,
-    marginTop: 5,
-    alignItems: "center",
-  },
-  confirmButtonText: { color: "#fff", fontWeight: "600" },
 });
