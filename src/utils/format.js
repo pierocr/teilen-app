@@ -38,6 +38,26 @@ const format = {
         minute: "2-digit",
       }),
   };
+
+  export const monto = (valor) => {
+    if (!valor && valor !== 0) return "";
+    return "$" + Number(valor).toLocaleString("es-CL", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  };
+  
+  export const fecha = (valor) => {
+    if (!valor) return "";
+    const fecha = new Date(valor);
+    if (isNaN(fecha.getTime())) return "";
+    return fecha.toLocaleDateString("es-CL", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+  
   
   export default format;
   

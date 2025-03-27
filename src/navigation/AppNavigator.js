@@ -15,6 +15,8 @@ import CuentaScreen from "../screens/CuentaScreen";
 import LoginScreen from "../screens/LoginScreen";
 import AmigoDetalleScreen from "../screens/AmigoDetalleScreen";
 import CrearGastoScreen from "../screens/CrearGastoScreen";
+import GastoDetalleScreen from "../screens/GastoDetalleScreen";
+
 
 import { AuthContext } from "../context/AuthContext";
 
@@ -33,7 +35,10 @@ function HomeStack() {
       />
       <Stack.Screen name="GrupoDetalle" component={GrupoDetalleScreen} />
       <Stack.Screen name="CrearGasto" component={CrearGastoScreen} options={{ title: "Añadir Gasto" }} />
+      <Stack.Screen name="GastoDetalle" component={GastoDetalleScreen} options={{ title: "Detalle del Gasto" }}
+/>
     </Stack.Navigator>
+    
   );
 }
 

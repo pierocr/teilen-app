@@ -1,53 +1,44 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
-  Alert
+  Alert,
+  ScrollView,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { useNavigation, useRoute } from "@react-navigation/native";
 
-const CrearGastoScreen = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { grupoId, grupoNombre, participantes } = route.params;
+const CrearGastoScreen = ({ route, navigation }) => {
+  const { grupoId, grupoNombre, participantes = [] } = route.params;
 
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
   const [pagadoPor, setPagadoPor] = useState(null);
-  const [usuarioActual, setUsuarioActual] = useState(null);
-  const [distribucion, setDistribucion] = useState("igual"); // igual | personalizado | porcentaje
+  const [distribucion, setDistribucion] = useState("igual");
   const [montosPersonalizados, setMontosPersonalizados] = useState({});
-
-  useEffect(() => {
-    const cargarUsuario = async () => {
-      const storedUser = await AsyncStorage.getItem("usuario");
-      if (storedUser) {
-        const userObj = JSON.parse(storedUser);
-        setUsuarioActual(userObj);
-        setPagadoPor(userObj.id);
-      }
-    };
-    cargarUsuario();
-  }, []);
+  const [porcentajes, setPorcentajes] = useState({});
 
   const handleGuardar = async () => {
     if (!descripcion || !monto || !pagadoPor) {
       return Alert.alert("Campos requeridos", "Completa todos los campos obligatorios");
     }
 
+    const montoLimpio = parseInt(monto.replace(/\./g, ""), 10);
+
+    if (isNaN(montoLimpio) || montoLimpio <= 0) {
+      return Alert.alert("Monto inválido", "Ingresa un monto válido mayor a cero.");
+    }
+
     try {
       const token = await AsyncStorage.getItem("token");
+
       const payload = {
         id_grupo: grupoId,
         descripcion,
-        monto: Number(monto),
+        monto: montoLimpio,
         pagado_por: pagadoPor,
         id_usuarios: participantes.map((u) => u.id),
         imagen: "🧾",
@@ -55,10 +46,47 @@ const CrearGastoScreen = () => {
       };
 
       if (distribucion === "personalizado") {
-        payload.montos_personalizados = montosPersonalizados;
+        const montosNumericos = Object.values(montosPersonalizados).map((m) =>
+          parseInt(m.replace(/\./g, ""), 10)
+        );
+
+        const sumaMontos = montosNumericos.reduce((acc, val) => acc + val, 0);
+
+        if (sumaMontos !== montoLimpio) {
+          return Alert.alert(
+            "❌ Montos personalizados inválidos",
+            `La suma (${sumaMontos.toLocaleString()}) no coincide con el monto total (${montoLimpio.toLocaleString()})`
+          );
+        }
+
+        payload.montos_personalizados = Object.fromEntries(
+          Object.entries(montosPersonalizados).map(([id, valor]) => [
+            id,
+            parseInt(valor.replace(/\./g, ""), 10),
+          ])
+        );
       }
 
-      const res = await axios.post("http://localhost:5001/gastos", payload, {
+      if (distribucion === "porcentaje") {
+        const porcentajeNumerico = Object.values(porcentajes).map((p) => parseInt(p, 10) || 0);
+        const suma = porcentajeNumerico.reduce((acc, val) => acc + val, 0);
+
+        if (suma !== 100) {
+          return Alert.alert(
+            "❌ Porcentajes inválidos",
+            `La suma total debe ser 100%. Actualmente suma ${suma}%.`
+          );
+        }
+
+        payload.montos_porcentuales = Object.fromEntries(
+          Object.entries(porcentajes).map(([id, porcentaje]) => [
+            id,
+            Math.round((parseInt(porcentaje, 10) / 100) * montoLimpio),
+          ])
+        );
+      }
+
+      await axios.post("http://localhost:5001/gastos", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -69,67 +97,107 @@ const CrearGastoScreen = () => {
     }
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Añadir gasto a "{grupoNombre}"</Text>
+  const handleCambioMonto = (text) => {
+    const soloNumeros = text.replace(/[^0-9]/g, "");
+    const conFormato = soloNumeros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    setMonto(conFormato);
+  };
 
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.label}>Descripción</Text>
       <TextInput
-        placeholder="Descripción del gasto"
+        placeholder="Ej: Cena, Regalo"
         value={descripcion}
         onChangeText={setDescripcion}
         style={styles.input}
       />
 
+      <Text style={styles.label}>Monto total</Text>
       <TextInput
-        placeholder="Monto total"
-        value={monto}
-        onChangeText={setMonto}
+        placeholder="$0"
+        value={monto ? `$${monto}` : ""}
+        onChangeText={handleCambioMonto}
         keyboardType="numeric"
         style={styles.input}
       />
 
-      <Text style={styles.subtitle}>¿Quién pagó?</Text>
+      <Text style={styles.label}>¿Quién pagó?</Text>
       {participantes.map((u) => (
         <TouchableOpacity
           key={u.id}
-          style={styles.radioOption}
+          style={[styles.radioOption, pagadoPor === u.id && styles.radioOptionSelected]}
           onPress={() => setPagadoPor(u.id)}
         >
-          <Ionicons
-            name={pagadoPor === u.id ? "radio-button-on" : "radio-button-off"}
-            size={20}
-            color="#2a5298"
-          />
-          <Text style={styles.radioText}>{u.nombre}</Text>
+          <Text>{u.nombre}</Text>
         </TouchableOpacity>
       ))}
 
-      <Text style={styles.subtitle}>Dividir gasto</Text>
-      <View style={styles.radioGroup}>
-        <TouchableOpacity onPress={() => setDistribucion("igual")}>
-          <Text style={distribucion === "igual" ? styles.activeOption : styles.option}>
-            Partes iguales
-          </Text>
+      <Text style={styles.label}>¿Cómo dividir el gasto?</Text>
+      <View style={styles.radioRow}>
+        <TouchableOpacity
+          style={[styles.radioOption, distribucion === "igual" && styles.radioOptionSelected]}
+          onPress={() => setDistribucion("igual")}
+        >
+          <Text>Iguales</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setDistribucion("personalizado")}>
-          <Text style={distribucion === "personalizado" ? styles.activeOption : styles.option}>
-            Montos personalizados
-          </Text>
+
+        <TouchableOpacity
+          style={[styles.radioOption, distribucion === "personalizado" && styles.radioOptionSelected]}
+          onPress={() => setDistribucion("personalizado")}
+        >
+          <Text>Personalizado</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.radioOption, distribucion === "porcentaje" && styles.radioOptionSelected]}
+          onPress={() => setDistribucion("porcentaje")}
+        >
+          <Text>Porcentaje</Text>
         </TouchableOpacity>
       </View>
 
       {distribucion === "personalizado" && (
         <View>
           {participantes.map((u) => (
-            <View key={u.id} style={styles.montoPersonalizado}>
-              <Text>{u.nombre}:</Text>
+            <View key={u.id} style={styles.montoPersonalizadoRow}>
+              <Text style={styles.nombreUsuario}>{u.nombre}</Text>
               <TextInput
-                keyboardType="numeric"
                 placeholder="$0"
-                style={styles.inputPequeño}
-                onChangeText={(val) =>
-                  setMontosPersonalizados((prev) => ({ ...prev, [u.id]: Number(val) }))
-                }
+                keyboardType="numeric"
+                style={[styles.input, { flex: 1 }]}
+                value={montosPersonalizados[u.id] ? `$${montosPersonalizados[u.id]}` : ""}
+                onChangeText={(text) => {
+                  const soloNumeros = text.replace(/[^0-9]/g, "");
+                  const conFormato = soloNumeros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                  setMontosPersonalizados({
+                    ...montosPersonalizados,
+                    [u.id]: conFormato,
+                  });
+                }}
+              />
+            </View>
+          ))}
+        </View>
+      )}
+
+      {distribucion === "porcentaje" && (
+        <View>
+          {participantes.map((u) => (
+            <View key={u.id} style={styles.montoPersonalizadoRow}>
+              <Text style={styles.nombreUsuario}>{u.nombre}</Text>
+              <TextInput
+                placeholder="%"
+                keyboardType="numeric"
+                style={[styles.input, { flex: 1 }]}
+                value={porcentajes[u.id]?.toString() || ""}
+                onChangeText={(text) => {
+                  const soloNumeros = text.replace(/[^0-9]/g, "");
+                  setPorcentajes({
+                    ...porcentajes,
+                    [u.id]: soloNumeros,
+                  });
+                }}
               />
             </View>
           ))}
@@ -137,7 +205,7 @@ const CrearGastoScreen = () => {
       )}
 
       <TouchableOpacity style={styles.botonGuardar} onPress={handleGuardar}>
-        <Text style={styles.botonGuardarTexto}>Guardar gasto</Text>
+        <Text style={styles.textoGuardar}>Guardar gasto</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -145,69 +213,59 @@ const CrearGastoScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 16,
     backgroundColor: "#fff",
   },
-  title: {
-    fontSize: 20,
+  label: {
+    fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 20,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginTop: 20,
-    marginBottom: 5,
+    marginTop: 10,
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 10,
-    marginBottom: 10,
     borderRadius: 6,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 8,
   },
   radioOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#aaa",
+    borderRadius: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  radioOptionSelected: {
+    backgroundColor: "#cde2ff",
+    borderColor: "#3a7",
+  },
+  radioRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 10,
   },
-  radioText: {
-    marginLeft: 8,
-  },
-  radioGroup: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 10,
-  },
-  option: {
-    color: "#888",
-  },
-  activeOption: {
-    fontWeight: "bold",
-    color: "#2a5298",
-    textDecorationLine: "underline",
-  },
-  montoPersonalizado: {
+  montoPersonalizadoRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  inputPequeño: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 5,
-    width: 80,
-    marginLeft: 8,
+  nombreUsuario: {
+    width: 100,
   },
   botonGuardar: {
     backgroundColor: "#2a5298",
-    padding: 12,
-    marginTop: 30,
+    padding: 14,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 20,
   },
-  botonGuardarTexto: {
+  textoGuardar: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,

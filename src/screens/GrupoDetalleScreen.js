@@ -1,3 +1,4 @@
+// GrupoDetalleScreen.js
 import React, { useEffect, useState, useContext } from "react";
 import {
   View,
@@ -13,38 +14,28 @@ import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import API_URL from "../config";
 import { Ionicons } from "@expo/vector-icons";
+import GastoItem from "../components/GastoItem";
+import { useFocusEffect } from "@react-navigation/native";
 
-const iconosCategorias = {
-  comida: "fast-food-outline",
-  transporte: "car-outline",
-  entretenimiento: "film-outline",
-  compras: "cart-outline",
-  otros: "help-circle-outline",
-};
-
-export default function GrupoDetalleScreen({ route, navigation }) {
+const GrupoDetalleScreen = ({ route, navigation }) => {
   const { grupoId, grupoNombre = "Grupo" } = route.params;
   const { user } = useContext(AuthContext);
-  const usuarioActual = user?.id;
 
   const [gastos, setGastos] = useState([]);
-  const [deudas, setDeudas] = useState([]);
   const [participantes, setParticipantes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mostrarSoloMisDeudas, setMostrarSoloMisDeudas] = useState(false);
 
   useEffect(() => {
-    obtenerDatosGrupo();
-    obtenerParticipantes();
-    navigation.setOptions({ title: "Detalle" });
+    navigation.setOptions({ title: grupoNombre });
   }, []);
 
-  const formatearMonto = (monto) => {
-    return `$${new Intl.NumberFormat("es-CL", {
-      style: "decimal",
-      maximumFractionDigits: 0,
-    }).format(monto)}`;
-  };
+  useFocusEffect(
+    React.useCallback(() => {
+      obtenerDatosGrupo();
+      obtenerParticipantes();
+    }, [])
+  );
 
   const obtenerDatosGrupo = async () => {
     try {
@@ -52,13 +43,26 @@ export default function GrupoDetalleScreen({ route, navigation }) {
       const responseGastos = await axios.get(`${API_URL}/gastos/${grupoId}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      setGastos(responseGastos.data || []);
 
-      const responseDeudas = await axios.get(`${API_URL}/deudas/desglose/${grupoId}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
+      const gastosProcesados = responseGastos.data.map((g) => {
+        let label = "Sin participación";
+        let color = "gray";
+        if (g.relacion_usuario === "a_favor") {
+          label = `Te deben CLP${g.monto_usuario.toLocaleString()}`;
+          color = "green";
+        } else if (g.relacion_usuario === "debes") {
+          label = `Debes CLP${g.monto_usuario.toLocaleString()}`;
+          color = "red";
+        }
+        return {
+          ...g,
+          pagado_por: g.pagado_por?.nombre || "Desconocido",
+          relacion_label: label,
+          relacion_color: color,
+        };
       });
 
-      setDeudas(Array.isArray(responseDeudas.data.resultado) ? responseDeudas.data.resultado : []);
+      setGastos(gastosProcesados);
     } catch (error) {
       console.error("❌ Error obteniendo datos del grupo:", error);
       Alert.alert("Error", "No se pudieron obtener los datos.");
@@ -69,43 +73,24 @@ export default function GrupoDetalleScreen({ route, navigation }) {
 
   const obtenerParticipantes = async () => {
     try {
-      const response = await axios.get(`${API_URL}/grupos/${grupoId}/participantes`, {
+      const res = await axios.get(`${API_URL}/grupos/${grupoId}/participantes`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-
-      setParticipantes(response.data || []);
+      setParticipantes(res.data);
     } catch (error) {
       console.error("❌ Error obteniendo participantes:", error);
-      Alert.alert("Error", "No se pudieron cargar los participantes.");
+      Alert.alert("Error", "No se pudieron cargar los participantes del grupo.");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{grupoNombre}</Text>
-
       <TouchableOpacity
         style={styles.agregarButton}
         onPress={() => navigation.navigate("AgregarParticipante", { grupoId })}
       >
-        <Text style={styles.agregarText}>+ Agregar Participante</Text>
+        <Text style={styles.agregarText}>+ Participante</Text>
       </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Participantes</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <FlatList
-          data={participantes}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.participantName}>{item.nombre}</Text>
-              <Text style={styles.participantEmail}>{item.correo}</Text>
-            </View>
-          )}
-        />
-      )}
 
       <View style={styles.switchContainer}>
         <Text style={styles.switchLabel}>Mostrar solo mis deudas</Text>
@@ -120,84 +105,40 @@ export default function GrupoDetalleScreen({ route, navigation }) {
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <FlatList
-          data={gastos}
+          data={gastos.filter((g) => !mostrarSoloMisDeudas || g.relacion_usuario === "debes")}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => {
-            if (!usuarioActual) return null;
-            const esPagador = item.pagado_por === usuarioActual;
-            const textoEstado = esPagador
-              ? "Tú pagaste"
-              : `Debes ${formatearMonto(item.monto)}`;
-            const colorTexto = esPagador ? "#1b873e" : "#d11a2a";
-
-            return (
-              <View
-                style={[
-                  styles.card,
-                  { backgroundColor: esPagador ? "#f2fef3" : "#fef2f2" },
-                ]}
-              >
-                <View style={styles.row}>
-                  <Ionicons
-                    name={iconosCategorias[item.categoria] || "help-circle-outline"}
-                    size={24}
-                    color="#555"
-                    style={{ marginRight: 10 }}
-                  />
-                  <View>
-                    <Text style={styles.descripcion}>
-                      {item.descripcion}: {formatearMonto(item.monto)}
-                    </Text>
-                    <Text style={styles.pagadoPor}>
-                      Pagado por: {item.pagado_por_nombre}
-                    </Text>
-                    <Text style={[styles.estadoTexto, { color: colorTexto }]}>
-                      {textoEstado}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            );
-          }}
-        />
-      )}
-
-      <Text style={styles.sectionTitle}>Deudas</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <FlatList
-          data={
-            Array.isArray(deudas)
-              ? deudas.filter((d) => !mostrarSoloMisDeudas || d.deudor_id === user.id)
-              : []
-          }
-          keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.deudaTexto}>
-                {item.deudor_nombre} → {item.acreedor_nombre}:{" "}
-                <Text style={styles.monto}>{formatearMonto(item.monto_total)}</Text>
-              </Text>
-            </View>
+            <GastoItem
+              id={item.id} // ✅ Aquí está el fix
+              descripcion={item.descripcion}
+              monto={item.monto}
+              imagen={item.imagen}
+              fecha={item.fecha}
+              pagado_por={{ nombre: item.pagado_por }}
+              relacion_usuario={item.relacion_usuario}
+              monto_usuario={item.monto_usuario}
+              relacion_label={item.relacion_label}
+              relacion_color={item.relacion_color}
+            />
           )}
         />
       )}
+
       <TouchableOpacity
-  style={styles.fab}
-  onPress={() =>
-    navigation.navigate("CrearGasto", {
-      grupoId,
-      grupoNombre,
-      participantes,
-    })
-  }
->
-  <Ionicons name="add" size={28} color="#fff" />
-</TouchableOpacity>
+        style={styles.fab}
+        onPress={() =>
+          navigation.navigate("CrearGasto", {
+            grupoId,
+            grupoNombre,
+            participantes,
+          })
+        }
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -205,82 +146,30 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    marginBottom: 12,
-    textAlign: "center",
-    color: "#333",
-  },
   agregarButton: {
     backgroundColor: "#2a5298",
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    alignSelf: "flex-end",
+    marginBottom: 10,
   },
   agregarText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "500",
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 8,
     color: "#444",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  descripcion: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-  },
-  pagadoPor: {
-    fontSize: 13,
-    color: "#777",
-  },
-  estadoTexto: {
-    fontWeight: "bold",
-    fontSize: 14,
-    marginTop: 4,
-  },
-  deudaTexto: {
-    fontSize: 15,
-    color: "#333",
-  },
-  monto: {
-    color: "#d11a2a",
-    fontWeight: "600",
-  },
-  participantName: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
-  },
-  participantEmail: {
-    fontSize: 13,
-    color: "#777",
   },
   switchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    marginBottom: 12,
   },
   switchLabel: {
     flex: 1,
@@ -304,3 +193,5 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 });
+
+export default GrupoDetalleScreen;
