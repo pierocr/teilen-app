@@ -11,7 +11,7 @@ export default function CrearGrupoModal({
   setImagenGrupo,
 }) {
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>Crear nuevo grupo</Text>
@@ -44,7 +44,7 @@ export default function CrearGrupoModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },

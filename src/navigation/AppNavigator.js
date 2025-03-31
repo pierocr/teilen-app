@@ -16,6 +16,8 @@ import LoginScreen from "../screens/LoginScreen";
 import AmigoDetalleScreen from "../screens/AmigoDetalleScreen";
 import CrearGastoScreen from "../screens/CrearGastoScreen";
 import GastoDetalleScreen from "../screens/GastoDetalleScreen";
+import RegisterScreen from "../screens/RegisterScreen";
+
 
 
 import { AuthContext } from "../context/AuthContext";
@@ -27,24 +29,38 @@ const Tab = createBottomTabNavigator();
 
 function HomeStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        animation: "fade", // Transición de desvanecimiento
+      }}
+    >
       <Stack.Screen
         name="Tus Grupos"
         component={HomeScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen name="GrupoDetalle" component={GrupoDetalleScreen} />
-      <Stack.Screen name="CrearGasto" component={CrearGastoScreen} options={{ title: "Añadir Gasto" }} />
-      <Stack.Screen name="GastoDetalle" component={GastoDetalleScreen} options={{ title: "Detalle del Gasto" }}
-/>
+      <Stack.Screen
+        name="CrearGasto"
+        component={CrearGastoScreen}
+        options={{ title: "Añadir Gasto" }}
+      />
+      <Stack.Screen
+        name="GastoDetalle"
+        component={GastoDetalleScreen}
+        options={{ title: "Detalle del Gasto" }}
+      />
     </Stack.Navigator>
-    
   );
 }
 
 function AmigosStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        animation: "fade", // Misma transición
+      }}
+    >
       <Stack.Screen
         name="AmigosMain"
         component={AmigosScreen}
@@ -61,11 +77,20 @@ function AmigosStack() {
 
 function AuthStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        animation: "fade", // Transición en el login
+      }}
+    >
       <Stack.Screen
         name="Login"
         component={LoginScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Registro"
+        component={RegisterScreen}
+        options={{ title: "Crear Cuenta" }}
       />
     </Stack.Navigator>
   );

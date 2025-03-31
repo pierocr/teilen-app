@@ -19,7 +19,8 @@ export default function BalanceCard({ balance, totalAFavor, totalAdeudado }) {
   }
 
   return (
-    <LinearGradient colors={["#1e3c72", "#2a5298"]} style={styles.card}>
+    
+    <LinearGradient colors={["#2a8873", "#1b6db2"]} style={styles.card}>
       <Text style={styles.balanceText}>{balanceLabel}</Text>
       <Text style={styles.secondaryText}>
         A favor: ${formatear(totalAFavor)} | Adeudado: ${formatear(totalAdeudado)}
@@ -41,12 +42,12 @@ const styles = StyleSheet.create({
   },
   balanceText: {
     fontSize: 20,
-    fontWeight: "600",
-    color: "#fff",
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 6,
   },
   secondaryText: {
     fontSize: 15,
-    color: "#e0e0e0",
+    color: "white",
   },
 });
