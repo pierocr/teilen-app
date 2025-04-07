@@ -11,7 +11,7 @@ export default function EditarGrupoModal({
   setImagenGrupo,
 }) {
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>Editar grupo</Text>

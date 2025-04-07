@@ -1,3 +1,4 @@
+// AppNavigator.js
 import React, { useContext } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -17,8 +18,8 @@ import AmigoDetalleScreen from "../screens/AmigoDetalleScreen";
 import CrearGastoScreen from "../screens/CrearGastoScreen";
 import GastoDetalleScreen from "../screens/GastoDetalleScreen";
 import RegisterScreen from "../screens/RegisterScreen";
-
-
+import EditarCuentaScreen from "../screens/EditarCuentaScreen";
+import LoadingScreen from "../screens/LoadingScreen"; // ¡OJO! Asegúrate de tener este archivo
 
 import { AuthContext } from "../context/AuthContext";
 
@@ -29,11 +30,7 @@ const Tab = createBottomTabNavigator();
 
 function HomeStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        animation: "fade", // Transición de desvanecimiento
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerBackTitleVisible: false }}>
       <Stack.Screen
         name="Tus Grupos"
         component={HomeScreen}
@@ -56,11 +53,7 @@ function HomeStack() {
 
 function AmigosStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        animation: "fade", // Misma transición
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerBackTitleVisible: false }}>
       <Stack.Screen
         name="AmigosMain"
         component={AmigosScreen}
@@ -75,11 +68,29 @@ function AmigosStack() {
   );
 }
 
+function CuentaStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerBackTitleVisible: false }}>
+      <Stack.Screen
+        name="CuentaMain"
+        component={CuentaScreen}
+        options={{ title: "Mi Cuenta" }}
+      />
+      <Stack.Screen
+        name="EditarCuenta"
+        component={EditarCuentaScreen}
+        options={{ title: "Editar Cuenta" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function AuthStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        animation: "fade", // Transición en el login
+        headerBackTitleVisible: false,
+        animation: "fade",
       }}
     >
       <Stack.Screen
@@ -97,7 +108,12 @@ function AuthStack() {
 }
 
 export default function AppNavigator() {
-  const { user } = useContext(AuthContext);
+  const { user, isLoading } = useContext(AuthContext);
+
+  // Mientras se verifica el token, mostramos la pantalla de carga
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <NavigationContainer ref={navigationRef}>
@@ -118,7 +134,7 @@ export default function AppNavigator() {
           <Tab.Screen name="Grupos" component={HomeStack} />
           <Tab.Screen name="Amigos" component={AmigosStack} />
           <Tab.Screen name="Actividad" component={ActividadScreen} />
-          <Tab.Screen name="Cuenta" component={CuentaScreen} />
+          <Tab.Screen name="Cuenta" component={CuentaStack} />
         </Tab.Navigator>
       ) : (
         <AuthStack />

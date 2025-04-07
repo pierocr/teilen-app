@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  ActivityIndicator, // CAMBIO: importamos ActivityIndicator
 } from "react-native";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
@@ -23,9 +24,11 @@ export default function HomeScreen({ navigation }) {
   const { user } = useContext(AuthContext);
 
   const [grupos, setGrupos] = useState([]);
+  // RECUERDA: 'loading' ya existe y lo iniciamos en true
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Balance general del usuario
   const [balance, setBalance] = useState(0);
   const [totalAFavor, setTotalAFavor] = useState(0);
   const [totalAdeudado, setTotalAdeudado] = useState(0);
@@ -42,36 +45,58 @@ export default function HomeScreen({ navigation }) {
   const [imagenGrupoEdit, setImagenGrupoEdit] = useState("");
 
   useEffect(() => {
-    obtenerGrupos();
-    obtenerBalance();
+    // Cargamos grupos y balance apenas montamos
+    cargarDatos();
   }, []);
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    await Promise.all([
+      obtenerGrupos(),
+      obtenerBalance(), // Llamamos ambos en paralelo
+    ]);
+    setLoading(false);
+  };
 
   const obtenerGrupos = async () => {
     try {
-      setLoading(true);
       const response = await axios.get(`${API_URL}/grupos`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setGrupos(response.data);
     } catch (error) {
       Alert.alert("Error", "No se pudieron obtener los grupos.");
-    } finally {
-      setLoading(false);
+      console.error("Error al obtener grupos:", error);
     }
   };
 
   const obtenerBalance = async () => {
     try {
-      const response = await axios.get(`${API_URL}/balance`, {
+      const response = await axios.get(`${API_URL}/usuarios/resumen`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      const { balance, total_a_favor, total_adeudado } = response.data;
-      setBalance(balance);
+
+      const {
+        total_a_favor,
+        total_adeudado,
+        total_por_cobrar,
+      } = response.data;
+
+      const balanceCalculado =
+        (total_por_cobrar || 0) - (total_adeudado || 0);
+
+      setBalance(balanceCalculado);
       setTotalAFavor(total_a_favor);
       setTotalAdeudado(total_adeudado);
     } catch (error) {
       console.error("Error obteniendo balance:", error);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarDatos();
+    setRefreshing(false);
   };
 
   const crearGrupo = async () => {
@@ -91,7 +116,9 @@ export default function HomeScreen({ navigation }) {
       setModalCrearVisible(false);
       setNombreGrupo("");
       setImagenGrupo("");
-      obtenerBalance();
+      // Volvemos a cargar balance y grupos
+      await cargarDatos();
+
       Alert.alert("Éxito", "Grupo creado correctamente");
     } catch (error) {
       console.error(error);
@@ -104,8 +131,7 @@ export default function HomeScreen({ navigation }) {
       await axios.delete(`${API_URL}/grupos/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      obtenerGrupos();
-      obtenerBalance();
+      await cargarDatos();
       Alert.alert("Éxito", "Grupo eliminado correctamente");
     } catch (err) {
       console.error(err);
@@ -127,7 +153,11 @@ export default function HomeScreen({ navigation }) {
           : "¿Estás seguro que deseas eliminar este grupo?",
         [
           { text: "Cancelar", style: "cancel" },
-          { text: "Eliminar", style: "destructive", onPress: () => eliminarGrupo(id) },
+          {
+            text: "Eliminar",
+            style: "destructive",
+            onPress: () => eliminarGrupo(id),
+          },
         ]
       );
     } catch (error) {
@@ -157,8 +187,7 @@ export default function HomeScreen({ navigation }) {
       );
 
       setModalEditarVisible(false);
-      obtenerGrupos();
-      obtenerBalance();
+      await cargarDatos();
       Alert.alert("Éxito", "Grupo actualizado");
     } catch (error) {
       console.error(error);
@@ -166,15 +195,8 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await obtenerGrupos();
-    await obtenerBalance();
-    setRefreshing(false);
-  };
-
-  const irADetalleGrupo = (grupoId) => {
-    navigation.navigate("GrupoDetalle", { grupoId });
+  const irADetalleGrupo = (grupoId, grupoNombre) => {
+    navigation.navigate("GrupoDetalle", { grupoId, grupoNombre });
   };
 
   return (
@@ -184,7 +206,6 @@ export default function HomeScreen({ navigation }) {
         <View>
           <Text style={styles.welcome}>Bienvenido</Text>
           <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
-          <Text style={styles.userPlan}>Basic</Text>
         </View>
         <Image
           source={{
@@ -196,7 +217,7 @@ export default function HomeScreen({ navigation }) {
         />
       </View>
 
-      {/* Balance */}
+      {/* BalanceCard */}
       <BalanceCard
         balance={balance}
         totalAFavor={totalAFavor}
@@ -204,28 +225,40 @@ export default function HomeScreen({ navigation }) {
       />
 
       {/* Botón Nuevo Grupo */}
-      <TouchableOpacity style={styles.botonNuevoGrupo} onPress={() => setModalCrearVisible(true)}>
+      <TouchableOpacity
+        style={styles.botonNuevoGrupo}
+        onPress={() => setModalCrearVisible(true)}
+      >
         <Text style={styles.textoBotonNuevoGrupo}>+ Nuevo Grupo</Text>
       </TouchableOpacity>
-
 
       {/* Título sección */}
       <Text style={styles.sectionTitle}>Grupos</Text>
 
-      {/* Lista de grupos */}
-      <FlatList
-        data={grupos}
-        keyExtractor={(item) => item.id.toString()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        renderItem={({ item }) => (
-          <GrupoItem
-            grupo={item}
-            onPress={irADetalleGrupo}
-            onEditar={abrirModalEditarGrupo}
-            onEliminar={confirmarEliminarGrupo}
-          />
-        )}
-      />
+      {loading ? (
+        // CAMBIO: antes tenías <Text>Cargando...</Text>
+        // Ahora mostramos un spinner y un mensaje
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#999" />
+          <Text style={{ marginTop: 10 }}>Cargando grupos...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={grupos}
+          keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          renderItem={({ item }) => (
+            <GrupoItem
+              grupo={item}
+              onPress={() => irADetalleGrupo(item.id, item.nombre)}
+              onEditar={abrirModalEditarGrupo}
+              onEliminar={confirmarEliminarGrupo}
+            />
+          )}
+        />
+      )}
 
       {/* Modal Crear */}
       <CrearGrupoModal
@@ -267,28 +300,7 @@ const styles = StyleSheet.create({
   },
   welcome: { fontSize: 16, color: "#666" },
   nombreUsuario: { fontSize: 20, fontWeight: "bold" },
-  userPlan: { fontSize: 14, color: "#888" },
   avatar: { width: 50, height: 50, borderRadius: 25 },
-  nuevoGrupo: {
-    backgroundColor: "#2a5298",
-    borderRadius: 8,
-    padding: 12,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  nuevoGrupoTexto: {
-    fontSize: 16,
-    color: "#007aff",
-    fontWeight: "600",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    paddingBottom: 4,
-  },
   botonNuevoGrupo: {
     backgroundColor: "#2a5298",
     paddingVertical: 14,
@@ -305,5 +317,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    paddingBottom: 4,
   },
 });

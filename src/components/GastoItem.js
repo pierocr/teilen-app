@@ -1,3 +1,4 @@
+// GastoItem.js
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -48,6 +49,7 @@ const GastoItem = ({
           <Text style={styles.pagadoPor}>
             Pagado por {pagado_por?.nombre || "Desconocido"}
           </Text>
+          <Text style={styles.montoGasto}>Total: {format.monto(monto)}</Text>
         </View>
 
         {/* Deuda o monto */}
@@ -67,7 +69,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     backgroundColor: "#f9f9f9",
     borderRadius: 10,
-    elevation: 1,
+    elevation: 0,
   },
   fecha: {
     width: 60,
@@ -93,6 +95,10 @@ const styles = StyleSheet.create({
   pagadoPor: {
     fontSize: 12,
     color: "#777",
+  },
+  montoGasto: {
+    fontSize: 12,
+    color: "#444",
   },
   montoContainer: {
     width: 100,

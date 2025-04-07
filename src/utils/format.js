@@ -54,10 +54,8 @@ const format = {
     return fecha.toLocaleDateString("es-CL", {
       day: "numeric",
       month: "short",
-      year: "numeric",
     });
   };
-  
-  
+
   export default format;
   

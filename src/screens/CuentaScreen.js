@@ -1,13 +1,13 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Text,
   StyleSheet,
+  View,
   Image,
-  ActivityIndicator,
-  Alert,
   TouchableOpacity,
   ScrollView,
-  View,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
@@ -15,7 +15,7 @@ import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
 import format from "../utils/format";
 
-export default function CuentaScreen() {
+export default function CuentaScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
   const [perfil, setPerfil] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function CuentaScreen() {
   const obtenerPerfil = async () => {
     try {
       setLoading(true);
-      const resp = await axios.get(`${API_URL}/auth/perfil`, {
+      const resp = await axios.get(`${API_URL}/usuarios/perfil`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setPerfil(resp.data);
@@ -56,8 +56,12 @@ export default function CuentaScreen() {
     );
   }
 
+  // Aquí usamos la imagen que viene de la BD.
+  // Si no existe, mostramos un ícono genérico.
   const fotoPerfil =
-    perfil.imagen_perfil || "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+    perfil.imagen_perfil ||
+    "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+
   const telefono = perfil.telefono || "No especificado";
   const direccion = perfil.direccion || "No especificada";
   const fechaNacimiento = perfil.fecha_nacimiento
@@ -69,77 +73,107 @@ export default function CuentaScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Mi Cuenta</Text>
 
-        <Image source={{ uri: fotoPerfil }} style={styles.avatar} />
+        {/* Mostramos siempre la foto proveniente de la BD (perfil.imagen_perfil). */}
+        <Image
+          source={{
+            uri: fotoPerfil,
+          }}
+          style={styles.avatar}
+        />
 
         <View style={styles.infoContainer}>
-          <Text style={styles.infoText}>
-            <Text style={styles.label}>Nombre: </Text>{perfil.nombre}
-          </Text>
-          <Text style={styles.infoText}>
-            <Text style={styles.label}>Correo: </Text>{perfil.correo}
-          </Text>
-          <Text style={styles.infoText}>
-            <Text style={styles.label}>Teléfono: </Text>{telefono}
-          </Text>
-          <Text style={styles.infoText}>
-            <Text style={styles.label}>Dirección: </Text>{direccion}
-          </Text>
-          <Text style={styles.infoText}>
-            <Text style={styles.label}>Fecha de nacimiento: </Text>{fechaNacimiento}
-          </Text>
+          <Dato label="Nombre" valor={perfil.nombre} />
+          <Dato label="Correo" valor={perfil.correo} />
+          <Dato label="Teléfono" valor={telefono} />
+          <Dato label="Dirección" valor={direccion} />
+          <Dato label="Fecha de nacimiento" valor={fechaNacimiento} />
         </View>
 
-        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Cerrar Sesión</Text>
+        {/* Botón para ir a la pantalla de editar cuenta */}
+        <TouchableOpacity
+          style={styles.btnEditar}
+          onPress={() => navigation.navigate("EditarCuenta")}>
+          <Text style={styles.btnEditarText}>Editar Cuenta</Text>
         </TouchableOpacity>
+
+        {/* Botón para cerrar sesión */}
+        <TouchableOpacity 
+        style={styles.btnLogout} 
+        onPress={logout}>
+        <Text style={styles.btnLogoutText}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+const Dato = ({ label, valor }) => (
+  <View style={styles.datoRow}>
+    <Text style={styles.label}>{label}:</Text>
+    <Text style={styles.valor}>{valor}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scroll: {
-    padding: 24,
-    alignItems: "center",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  scroll: { padding: 16, alignItems: "center" },
   title: {
-    fontSize: 22,
-    fontWeight: "600",
+    fontSize: 24,
+    fontWeight: "bold",
     marginBottom: 16,
+    textAlign: "center",
     color: "#333",
   },
   avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 20,
+    borderWidth: 2,
+    borderColor: "#ccc",
   },
   infoContainer: {
     width: "100%",
     marginBottom: 30,
+    paddingHorizontal: 10,
+  },
+  datoRow: {
+    flexDirection: "row",
+    marginBottom: 10,
   },
   label: {
     fontWeight: "600",
+    width: 150,
     color: "#444",
   },
-  infoText: {
-    fontSize: 16,
+  valor: {
     color: "#555",
-    marginBottom: 10,
+    flex: 1,
   },
-  logoutButton: {
-    backgroundColor: "#d11a2a",
+  btnLogout: {
+    backgroundColor: "#FF3B30",
     paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: 10,
+    marginBottom: 10,
   },
-  logoutText: {
+  btnLogoutText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  btnEditar: {
+    backgroundColor: "#2a5298",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+    marginVertical: 10,
+  },
+  btnEditarText: {
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 16,
   },
 });

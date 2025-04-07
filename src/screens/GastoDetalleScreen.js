@@ -28,6 +28,7 @@ const GastoDetalleScreen = ({ route }) => {
 
   useEffect(() => {
     obtenerDetalle();
+    
   }, []);
 
   const obtenerDetalle = async () => {

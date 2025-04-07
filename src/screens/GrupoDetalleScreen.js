@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Switch,
   TouchableOpacity,
 } from "react-native";
 import { AuthContext } from "../context/AuthContext";
@@ -15,6 +14,7 @@ import axios from "axios";
 import API_URL from "../config";
 import { Ionicons } from "@expo/vector-icons";
 import GastoItem from "../components/GastoItem";
+import ResumenGrupo from "../components/ResumenGrupo";
 import { useFocusEffect } from "@react-navigation/native";
 
 const GrupoDetalleScreen = ({ route, navigation }) => {
@@ -24,16 +24,38 @@ const GrupoDetalleScreen = ({ route, navigation }) => {
   const [gastos, setGastos] = useState([]);
   const [participantes, setParticipantes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mostrarSoloMisDeudas, setMostrarSoloMisDeudas] = useState(false);
+  const [resumen, setResumen] = useState(null);
 
   useEffect(() => {
-    navigation.setOptions({ title: grupoNombre });
+    navigation.setOptions({
+      title: grupoNombre,
+      headerBackTitleVisible: false,
+      headerBackTitle: "", // fuerza que no haya texto
+      headerBackImage: () => (
+        <Ionicons
+          name="chevron-back"
+          size={26}
+          color="#2a5298"
+          style={{ marginLeft: 8 }}
+        />
+      ),
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ConfiguracionGrupo", { grupoId })}
+          style={{ marginRight: 16 }}
+        >
+          <Ionicons name="settings-outline" size={22} color="#555" />
+        </TouchableOpacity>
+      ),
+    });
   }, []);
-
+  
+  
   useFocusEffect(
     React.useCallback(() => {
       obtenerDatosGrupo();
       obtenerParticipantes();
+      obtenerResumenGrupo();
     }, [])
   );
 
@@ -83,44 +105,56 @@ const GrupoDetalleScreen = ({ route, navigation }) => {
     }
   };
 
+  const obtenerResumenGrupo = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/grupos/${grupoId}/resumen`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      setResumen(res.data);
+    } catch (error) {
+      console.error("❌ Error obteniendo resumen del grupo:", error);
+    }
+  };
+
+  const porcentajePagado = resumen && resumen.total_gastado > 0
+    ? resumen.total_pagado / resumen.total_gastado
+    : 0;
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.agregarButton}
-        onPress={() => navigation.navigate("AgregarParticipante", { grupoId })}
-      >
-        <Text style={styles.agregarText}>+ Participante</Text>
-      </TouchableOpacity>
 
-      <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Mostrar solo mis deudas</Text>
-        <Switch
-          value={mostrarSoloMisDeudas}
-          onValueChange={() => setMostrarSoloMisDeudas(!mostrarSoloMisDeudas)}
+      {resumen && (
+        <ResumenGrupo
+          deudaRestante={resumen.total_adeudado}
+          porcentajePagado={porcentajePagado}
+          totalGastado={resumen.total_gastado}
+          totalPagado={resumen.total_pagado}
         />
-      </View>
+
+      )}
 
       <Text style={styles.sectionTitle}>Gastos</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <FlatList
-          data={gastos.filter((g) => !mostrarSoloMisDeudas || g.relacion_usuario === "debes")}
+          data={gastos}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <GastoItem
-              id={item.id} // ✅ Aquí está el fix
+              id={item.id}
               descripcion={item.descripcion}
               monto={item.monto}
               imagen={item.imagen}
               fecha={item.fecha}
-              pagado_por={{ nombre: item.pagado_por }}
+              pagado_por={{ nombre: item.pagado_por.split(" ")[0] || "Desconocido" }}
               relacion_usuario={item.relacion_usuario}
               monto_usuario={item.monto_usuario}
               relacion_label={item.relacion_label}
               relacion_color={item.relacion_color}
             />
           )}
+          contentContainerStyle={{ paddingBottom: 100 }}
         />
       )}
 
@@ -146,34 +180,24 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
-  agregarButton: {
-    backgroundColor: "#2a5298",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    alignSelf: "flex-end",
-    marginBottom: 10,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
-  agregarText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "500",
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2a2a2a",
+  },
+  configIcon: {
+    padding: 6,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginTop: 10,
     marginBottom: 8,
-    color: "#444",
-  },
-  switchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  switchLabel: {
-    flex: 1,
-    fontSize: 15,
     color: "#444",
   },
   fab: {

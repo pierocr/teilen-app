@@ -11,7 +11,7 @@ export default function CrearGrupoModal({
   setImagenGrupo,
 }) {
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+    <Modal transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>Crear nuevo grupo</Text>

@@ -1,0 +1,274 @@
+import React, { useState, useContext, useEffect } from "react";
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TextInput, 
+  TouchableOpacity, 
+  Image,
+  Alert 
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
+import API_URL from "../config";
+import format from "../utils/format";
+
+
+export default function EditarCuentaScreen({ navigation }) {
+ const { user, actualizarUsuario } = useContext(AuthContext);
+
+  // Estados para los campos
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [imagenLocal, setImagenLocal] = useState(null); // Para mostrar preview antes de subir
+  
+
+  useEffect(() => {
+    // Al montar la pantalla, traer el perfil actual (o recibirlo por params)
+    obtenerPerfil();
+  }, []);
+
+  const obtenerPerfil = async () => {
+    try {
+      const resp = await axios.get(`${API_URL}/usuarios/perfil`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const p = resp.data;
+      setNombre(p.nombre || "");
+      setTelefono(p.telefono || "");
+      setDireccion(p.direccion || "");
+      setFechaNacimiento(p.fecha_nacimiento || "");
+      // Nota: p.imagen_perfil es la URL ya guardada en la BD
+      // imagenLocal la usaremos cuando seleccionemos algo nuevo
+    } catch (error) {
+      Alert.alert("Error", "No se pudo cargar la información del usuario.");
+      console.error(error);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2.1 Seleccionar imagen desde galería o cámara
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const seleccionarImagen = async (origen = "galeria") => {
+    try {
+      // Pedimos permisos si no lo hicimos antes
+      const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permiso.granted) {
+        Alert.alert("Permiso denegado", "Necesitas permitir el acceso a la galería.");
+        return;
+      }
+
+      let resultado;
+      if (origen === "camara") {
+        const permisoCamara = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permisoCamara.granted) {
+          Alert.alert("Permiso denegado", "Necesitas permitir el acceso a la cámara.");
+          return;
+        }
+        resultado = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+      } else {
+        resultado = await ImagePicker.launchImageLibraryAsync({
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+      }
+
+      if (!resultado.canceled && resultado.assets?.length > 0) {
+        // Guardamos la URI local de la imagen elegida
+        setImagenLocal(resultado.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error al seleccionar imagen:", error);
+      Alert.alert("Error", "Ocurrió un problema al seleccionar la imagen.");
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2.2 Subir la nueva imagen de perfil (si hay) al backend
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const subirImagenPerfil = async () => {
+    if (!imagenLocal) return null; // No hay imagen nueva, no subimos nada
+
+    try {
+      const formData = new FormData();
+      formData.append("imagen", {
+        uri: imagenLocal,
+        type: "image/jpeg", // ajusta según el mime-type de la imagen
+        name: `perfil.jpg`,
+      });
+
+      const resp = await axios.post(`${API_URL}/usuarios/imagen`, formData, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (resp.data.url) {
+        // Actualizamos globalmente la info
+            actualizarUsuario({ imagen_perfil: resp.data.url });
+        // resp.data.url es la URL pública en Supabase
+        return resp.data.url;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error al subir imagen:", error);
+      Alert.alert("Error", "No se pudo subir la imagen de perfil.");
+      return null;
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2.3 Guardar cambios en el backend (nombre, teléfono, etc.)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const guardarCambios = async () => {
+    try {
+      // Primero subimos imagen (si hay) y obtenemos la URL
+      const urlImagen = await subirImagenPerfil();
+
+      // Luego guardamos datos en la BD
+      const resp = await axios.patch(`${API_URL}/usuarios/editar`, {
+        nombre,
+        telefono,
+        direccion,
+        fecha_nacimiento: fechaNacimiento,
+      }, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+
+      // Si la imagen se subió con éxito, 
+      // la BD ya se actualiza con `UPDATE usuarios ... imagen_perfil = ?`
+      // o la guardas con otro endpoint, depende cómo lo diseñes
+      // *Acá asumimos que la URL se setea en el endpoint /usuarios/imagen*
+
+      // O si prefieres en el mismo endpoint, 
+      // tu JSON puede incluir la urlImagen para guardarla en la BD:
+      // {
+      //   nombre, telefono, direccion, fecha_nacimiento,
+      //   imagen_perfil: urlImagen
+      // }
+
+      // Y luego refrescas la pantalla o navegas de regreso
+      Alert.alert("Éxito", "Datos actualizados correctamente");
+      navigation.goBack();
+    } catch (error) {
+      console.error("Error guardando cambios:", error);
+      Alert.alert("Error", "No se pudieron guardar los cambios.");
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2.4 Renderizar
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Editar Cuenta</Text>
+
+      {/* Foto de perfil */}
+      <View style={{ alignItems: "center" }}>
+        <Image
+          source={{
+            uri: imagenLocal 
+              ? imagenLocal 
+              : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+          }}
+          style={styles.avatar}
+        />
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.botonFoto}
+            onPress={() => seleccionarImagen("galeria")}
+          >
+            <Text style={styles.botonFotoText}>Galería</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.botonFoto}
+            onPress={() => seleccionarImagen("camara")}
+          >
+            <Text style={styles.botonFotoText}>Cámara</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Campos editables */}
+      <TextInput
+        style={styles.input}
+        placeholder="Nombre"
+        value={nombre}
+        onChangeText={setNombre}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Teléfono"
+        value={telefono}
+        onChangeText={setTelefono}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Dirección"
+        value={direccion}
+        onChangeText={setDireccion}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="YYYY-MM-DD"
+        value={fechaNacimiento}
+        onChangeText={setFechaNacimiento}
+      />
+
+      {/* Botón para guardar */}
+      <TouchableOpacity style={styles.botonGuardar} onPress={guardarCambios}>
+        <Text style={styles.botonGuardarText}>Guardar Cambios</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  titulo: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
+  avatar: {
+    width: 100, height: 100, borderRadius: 50,
+    marginBottom: 10, borderWidth: 1, borderColor: "#ccc"
+  },
+  row: {
+    flexDirection: "row", 
+    justifyContent: "space-around", 
+    width: "60%", 
+    marginBottom: 20 
+  },
+  botonFoto: {
+    backgroundColor: "#3498db",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  botonFotoText: { color: "#fff", fontWeight: "bold" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 12,
+  },
+  botonGuardar: {
+    backgroundColor: "green",
+    padding: 14,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  botonGuardarText: { color: "#fff", fontWeight: "bold" },
+});

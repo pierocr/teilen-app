@@ -1,93 +1,131 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { monto } from '../utils/format';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-export default function GrupoItem({ grupo, onPress, onEditar, onEliminar }) {
-  const { id, nombre, imagen, total, monto_adeudado } = grupo;
+const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
+  const [tooltip, setTooltip] = useState(null);
+  const { id, nombre, imagen, total_gastado, total_adeudado, total_pagado } = grupo;
+
+  const mostrarTooltip = (mensaje, tipo) => {
+    setTooltip({ mensaje, tipo });
+    setTimeout(() => setTooltip(null), 1500);
+  };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.8}
-      onPress={() => onPress(id)}
-    >
-      <View style={styles.infoContainer}>
-        <Image
-          source={{
-            uri: imagen || "https://cdn-icons-png.flaticon.com/512/3207/3207611.png",
-          }}
-          style={styles.image}
-        />
-        <View style={styles.textContainer}>
-          <Text style={styles.name}>{nombre}</Text>
-          <Text style={styles.total}>Total: ${Math.round(total || 0).toLocaleString("es-CL")}</Text>
-          <Text style={styles.debt}>
-            {monto_adeudado > 0 ? `Debes: $${Math.round(monto_adeudado).toLocaleString("es-CL")}` : "Sin deudas"}
-          </Text>
-        </View>
-      </View>
+    <TouchableOpacity onPress={() => onPress(id, nombre)}>
+      <View style={styles.container}>
+        <View style={styles.infoContainer}>
+          <Image
+            source={{ uri: imagen || 'https://cdn-icons-png.flaticon.com/512/3595/3595455.png' }}
+            style={styles.avatar}
+          />
 
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => onEditar(grupo)}>
-          <Ionicons name="pencil-outline" size={20} color="#555" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => onEliminar(id)}>
-          <Ionicons name="trash-outline" size={20} color="#d11a2a" />
-        </TouchableOpacity>
+          <View style={styles.textContainer}>
+            <Text style={styles.nombre}>{nombre}</Text>
+            <Text style={styles.total}>Total: {monto(total_gastado)}</Text>
+            <Text style={styles.deuda}>Debes: {monto(total_adeudado)}</Text>
+            <Text style={styles.favor}>Te deben: {monto(total_pagado)}</Text>
+          </View>
+
+          <View style={styles.botonesContainer}>
+            <TouchableOpacity
+              onPress={() => onEditar(grupo)}
+              onLongPress={() => mostrarTooltip("Editar", "editar")}
+              style={styles.iconButton}
+            >
+              <Icon name="edit" size={24} color="#4CAF50" />
+              {tooltip?.tipo === 'editar' && (
+                <Text style={styles.tooltipText}>{tooltip.mensaje}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onEliminar(grupo.id)}
+              onLongPress={() => mostrarTooltip("Eliminar", "eliminar")}
+              style={styles.iconButton}
+            >
+              <Icon name="delete" size={24} color="#F44336" />
+              {tooltip?.tipo === 'eliminar' && (
+                <Text style={styles.tooltipText}>{tooltip.mensaje}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  container: {
+    backgroundColor: '#F0F4F8', // 💡 gris azulado claro
+    borderRadius: 5,
+    marginVertical: 8,
+    padding: 10,
+    elevation: 0,
   },
   infoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  image: {
+  avatar: {
     width: 48,
     height: 48,
-    borderRadius: 8,
+    borderRadius: 10,
     marginRight: 12,
   },
   textContainer: {
-    flexDirection: "column",
+    flex: 1,
+    justifyContent: 'center',
   },
-  name: {
+  nombre: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 2,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   total: {
     fontSize: 14,
-    color: "#1b873e",
+    color: '#555',
   },
-  debt: {
+  deuda: {
     fontSize: 14,
-    color: "#d11a2a",
+    color: 'red',
   },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
+  favor: {
+    fontSize: 14,
+    color: 'green',
+  },
+  botonesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   iconButton: {
-    marginLeft: 10,
+    marginHorizontal: 4,
     padding: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
+  tooltipText: {
+    position: 'absolute',
+    left: 0,
+    top: 40,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    fontSize: 12,
+    color: '#333',
+    zIndex: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    minWidth: 50,         // 👈 asegúrate de tener espacio para varias letras
+    textAlign: 'center',  // 👈 centra el texto horizontalmente
+  }
+  
 });
+
+export default GrupoItem;
