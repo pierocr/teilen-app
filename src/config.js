@@ -1,4 +1,4 @@
-const ENV = 'dev'; // 'dev' o 'prod'
+const ENV = 'prod'; // 'dev' o 'prod'
 
 const API_URL = ENV === 'prod'
   ? 'https://teilen-backend.onrender.com'

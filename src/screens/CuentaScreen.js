@@ -14,6 +14,8 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
 import format from "../utils/format";
+import * as Updates from "expo-updates";
+
 
 export default function CuentaScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
@@ -23,6 +25,23 @@ export default function CuentaScreen({ navigation }) {
   useEffect(() => {
     obtenerPerfil();
   }, []);
+
+  const verificarActualizacion = async () => {
+    try {
+      const update = await Updates.checkForUpdateAsync();
+      if (update.isAvailable) {
+        Alert.alert("Actualización disponible", "Se descargará e instalará la nueva versión.");
+        await Updates.fetchUpdateAsync();
+        await Updates.reloadAsync();
+      } else {
+        Alert.alert("Todo está actualizado", "Ya tienes la última versión.");
+      }
+    } catch (error) {
+      console.error("Error buscando actualización:", error);
+      Alert.alert("Error", "No se pudo verificar actualizaciones.");
+    }
+  };
+
 
   const obtenerPerfil = async () => {
     try {
@@ -97,12 +116,24 @@ export default function CuentaScreen({ navigation }) {
         </TouchableOpacity>
 
         {/* Botón para cerrar sesión */}
-        <TouchableOpacity 
-        style={styles.btnLogout} 
-        onPress={logout}>
-        <Text style={styles.btnLogoutText}>Cerrar Sesión</Text>
+        <TouchableOpacity
+          style={styles.btnLogout}
+          onPress={logout}>
+          <Text style={styles.btnLogoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={{
+            marginTop: 20,
+            backgroundColor: "#2a5298",
+            padding: 12,
+            borderRadius: 10,
+            alignItems: "center",
+          }}
+          onPress={verificarActualizacion}
+        >
+          <Text style={{ color: "#fff", fontWeight: "bold" }}>Buscar Actualizaciones</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
