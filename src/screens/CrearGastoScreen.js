@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import API_URL from "../config";
 
 const CrearGastoScreen = ({ route, navigation }) => {
   const { grupoId, grupoNombre, participantes = [] } = route.params;
@@ -86,7 +87,7 @@ const CrearGastoScreen = ({ route, navigation }) => {
         );
       }
 
-      await axios.post("http://localhost:5001/gastos", payload, {
+      await axios.post(`${API_URL}/gastos`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

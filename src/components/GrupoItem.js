@@ -17,10 +17,13 @@ const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
       <View style={styles.container}>
         <View style={styles.infoContainer}>
           <Image
-            source={{ uri: imagen || 'https://cdn-icons-png.flaticon.com/512/3595/3595455.png' }}
+            source={
+              imagen && imagen !== "default"
+                ? { uri: imagen }
+                : require("../assets/image.png") // imagen local por defecto
+            }
             style={styles.avatar}
           />
-
           <View style={styles.textContainer}>
             <Text style={styles.nombre}>{nombre}</Text>
             <Text style={styles.total}>Total: {monto(total_gastado)}</Text>
@@ -58,7 +61,7 @@ const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F0F4F8', // 💡 gris azulado claro
+    backgroundColor: '#F0F4F8',
     borderRadius: 5,
     marginVertical: 8,
     padding: 10,
@@ -72,7 +75,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 10,
+    borderRadius: 24,
     marginRight: 12,
   },
   textContainer: {
@@ -122,10 +125,9 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
-    minWidth: 50,         // 👈 asegúrate de tener espacio para varias letras
-    textAlign: 'center',  // 👈 centra el texto horizontalmente
+    minWidth: 50,
+    textAlign: 'center',
   }
-  
 });
 
 export default GrupoItem;

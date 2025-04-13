@@ -1,3 +1,5 @@
+// LoginScreen.js
+
 import React, { useState, useContext, useRef, useEffect } from "react";
 import {
   Animated,
@@ -16,11 +18,17 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
 
+// Importa tu LoadingScreen
+import LoadingScreen from "./LoadingScreen";
+
 export default function LoginScreen({ navigation }) {
   const { login } = useContext(AuthContext);
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Nuevo estado para manejar la animación de carga
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -37,16 +45,33 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
+      // Activamos la pantalla de carga
+      setIsLoading(true);
+
       const response = await axios.post(`${API_URL}/auth/login`, {
         correo,
         password,
       });
+
       const { token, user } = response.data;
+
+      // Aquí el login fue exitoso
       login(token, user);
+
+      // Como en el login exitoso normalmente navegamos a otra pantalla
+      // no sería necesario setIsLoading(false). Pero si en tu caso
+      // necesitas quedarte en esta pantalla, puedes llamar a setIsLoading(false).
     } catch (error) {
+      // En caso de error (correo o password inválidos)
+      setIsLoading(false);
       Alert.alert("Error", "Correo o contraseña incorrectos");
     }
   };
+
+  // Si está en modo "cargando", mostramos la pantalla de carga en lugar del formulario
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <LinearGradient colors={["#24C6DC", "#514A9D"]} style={styles.container}>
@@ -97,7 +122,9 @@ export default function LoginScreen({ navigation }) {
             onPress={() => navigation.navigate("Registro")}
             style={styles.registerLink}
           >
-            <Text style={styles.registerText}>¿No tienes cuenta? Regístrate</Text>
+            <Text style={styles.registerText}>
+              ¿No tienes cuenta? Regístrate
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

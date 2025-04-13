@@ -20,6 +20,9 @@ import GastoDetalleScreen from "../screens/GastoDetalleScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import EditarCuentaScreen from "../screens/EditarCuentaScreen";
 import LoadingScreen from "../screens/LoadingScreen"; // ¡OJO! Asegúrate de tener este archivo
+import InvitacionScreen from "../screens/InvitacionScreen";
+import AgregarParticipanteScreen from "../screens/AgregarParticipanteScreen";
+import * as Linking from "expo-linking";
 
 import { AuthContext } from "../context/AuthContext";
 
@@ -27,6 +30,21 @@ export const navigationRef = createNavigationContainerRef();
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+
+const linking = {
+  prefixes: ["teilenapp://"],
+  config: {
+    screens: {
+      Invitacion: {
+        path: "invite",
+        parse: {
+          ref: (ref) => `${ref}`,
+        },
+      },
+    },
+  },
+};
 
 function HomeStack() {
   return (
@@ -47,6 +65,12 @@ function HomeStack() {
         component={GastoDetalleScreen}
         options={{ title: "Detalle del Gasto" }}
       />
+      {/* 2) Agregar la nueva pantalla */}
+      <Stack.Screen
+        name="AgregarParticipante"
+        component={AgregarParticipanteScreen}
+        options={{ title: "Añadir Participante" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -57,12 +81,12 @@ function AmigosStack() {
       <Stack.Screen
         name="AmigosMain"
         component={AmigosScreen}
-        options={{ title: "Amigos" }}
+        options={{ title: "Amigos", headerShown: false  }}
       />
       <Stack.Screen
         name="AmigoDetalle"
         component={AmigoDetalleScreen}
-        options={{ title: "Detalle del Amigo" }}
+        options={{ title: "Detalle del Amigo"}}
       />
     </Stack.Navigator>
   );
@@ -101,11 +125,17 @@ function AuthStack() {
       <Stack.Screen
         name="Registro"
         component={RegisterScreen}
-        options={{ title: "Crear Cuenta" }}
+        options={{ title: "Crear Cuenta", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Invitacion"
+        component={InvitacionScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
 }
+
 
 export default function AppNavigator() {
   const { user, isLoading } = useContext(AuthContext);
@@ -116,7 +146,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       {user ? (
         <Tab.Navigator
           screenOptions={({ route }) => ({

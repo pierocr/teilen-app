@@ -1,3 +1,4 @@
+// AmigosScreen.js
 import React, { useContext, useState, useEffect } from "react";
 import {
   View,
@@ -12,6 +13,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  Linking, // <-- Importamos Linking para abrir WhatsApp
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
@@ -89,20 +91,20 @@ export default function AmigosScreen() {
   // ─────────────────────────────────────────────────────────────────────────────
   const agregarAmigo = async (usuario) => {
     try {
-      // POST /amigos con { correo: usuario.correo } o { idUsuario: usuario.id }
+      // Cambiamos a { amigo_id: usuario.id } porque el backend espera "amigo_id"
       const resp = await fetch(`${API_URL}/amigos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${user.token}`,
         },
-        body: JSON.stringify({ correo: usuario.correo }),
+        body: JSON.stringify({ amigo_id: usuario.id }),
       });
 
       const data = await resp.json();
 
       if (!resp.ok) {
-        Alert.alert("Error", data.error || "No se pudo agregar el amigo.");
+        Alert.alert("Error", data.mensaje || "No se pudo agregar el amigo.");
         return;
       }
 
@@ -210,6 +212,60 @@ export default function AmigosScreen() {
   );
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // Si no hay resultados, ofrecer botón para invitar por WhatsApp
+  // ─────────────────────────────────────────────────────────────────────────────
+  const renderNoResultados = () => {
+    if (!busqueda) return null; // Si está vacío el buscador, no mostramos nada
+
+    return (
+      <View style={styles.noResultadosContainer}>
+        <Text style={styles.noResultadosText}>
+          No se encontraron usuarios con "{busqueda}"
+        </Text>
+        <TouchableOpacity
+          style={styles.btnWhatsApp}
+          onPress={() => {
+            // Texto que mandamos por WhatsApp
+            const mensaje = encodeURIComponent(
+              `¡Hola! Te invito a unirte a Teilen, la app de gastos compartidos. ` +
+              `Haz clic aquí para unirte: ${enlace}`
+            );
+            const whatsappUrl = `whatsapp://send?text=${mensaje}`;
+            Linking.openURL(whatsappUrl);            
+            Linking.openURL(whatsappUrl).catch(() => {
+              Alert.alert(
+                "Error",
+                "No se pudo abrir WhatsApp. ¿Lo tienes instalado?"
+              );
+            });
+          }}
+        >
+          <Text style={styles.btnWhatsAppText}>Invitar por WhatsApp</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Ofrecer botón para invitar por WhatsApp
+  // ─────────────────────────────────────────────────────────────────────────────
+  const invitarPorWhatsApp = () => {
+    // Sustituyes este dominio por el que realmente usarás
+    const enlace = `https://teilen-backend.onrender.com/invite?ref=${user.id}`;
+    // Mensaje codificado
+    const mensaje = encodeURIComponent(
+      `¡Hola! Te invito a unirte a Teilen, nuestra app de gastos compartidos. Regístrate aquí: ${enlace}`
+    );
+    const whatsappUrl = `whatsapp://send?text=${mensaje}`;
+  
+    Linking.openURL(whatsappUrl).catch(() => {
+      Alert.alert(
+        "Error",
+        "No se pudo abrir WhatsApp. ¿Lo tienes instalado?"
+      );
+    });
+  };  
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // Render principal
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -226,14 +282,18 @@ export default function AmigosScreen() {
         value={busqueda}
         onChangeText={buscarUsuarios} // Llama a la función que hace GET /usuarios/buscar
       />
+
       {/* Resultados */}
-      {resultadosBusqueda.length > 0 && (
+      {resultadosBusqueda.length > 0 ? (
         <FlatList
           data={resultadosBusqueda}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderResultado}
           style={styles.listaResultados}
         />
+      ) : (
+        // Si NO hay resultados, y hay algo escrito en "busqueda", mostramos invitación
+        renderNoResultados()
       )}
 
       {/* 2. Lista de amigos */}
@@ -254,15 +314,23 @@ export default function AmigosScreen() {
           />
         </>
       )}
+          {/* Botón de invitación por WhatsApp, para que siempre aparezca */}
+    <TouchableOpacity
+      style={styles.btnWhatsApp}
+      onPress={invitarPorWhatsApp}
+    >
+      <Text style={styles.btnWhatsAppText}>Invitar por WhatsApp</Text>
+    </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  container: { flex: 1, padding: 16, backgroundColor: "#fff"},
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
   subTitle: { fontSize: 18, fontWeight: "600", marginVertical: 8 },
   searchInput: {
+    marginTop: 10,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
@@ -294,6 +362,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+
+  // Amigos
   amigoItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -324,5 +394,29 @@ const styles = StyleSheet.create({
   eliminarTexto: {
     color: "#fff",
     fontWeight: "bold",
+  },
+
+  // Invitación por WhatsApp
+  noResultadosContainer: {
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  noResultadosText: {
+    marginBottom: 8,
+    fontSize: 16,
+    color: "#333",
+  },
+  btnWhatsApp: {
+    backgroundColor: "#25D366",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  btnWhatsAppText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

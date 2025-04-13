@@ -14,13 +14,18 @@ import {
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 import BalanceCard from "../components/BalanceCard";
 import GrupoItem from "../components/GrupoItem";
 import CrearGrupoModal from "../components/CrearGrupoModal";
 import EditarGrupoModal from "../components/EditarGrupoModal";
 
+
+
 export default function HomeScreen({ navigation }) {
+
   const { user } = useContext(AuthContext);
 
   const [grupos, setGrupos] = useState([]);
@@ -45,9 +50,12 @@ export default function HomeScreen({ navigation }) {
   const [imagenGrupoEdit, setImagenGrupoEdit] = useState("");
 
   useEffect(() => {
-    // Cargamos grupos y balance apenas montamos
-    cargarDatos();
-  }, []);
+    if (!modalCrearVisible) {
+      setLoading(true);
+      cargarDatos();
+    }
+  }, [modalCrearVisible]);
+  
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -63,12 +71,16 @@ export default function HomeScreen({ navigation }) {
       const response = await axios.get(`${API_URL}/grupos`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      setGrupos(response.data);
+
+      const gruposOrdenados = response.data.sort((a, b) => b.id - a.id);
+      setGrupos(gruposOrdenados);
+      
+      setGrupos(gruposOrdenados);
     } catch (error) {
       Alert.alert("Error", "No se pudieron obtener los grupos.");
       console.error("Error al obtener grupos:", error);
     }
-  };
+  };  
 
   const obtenerBalance = async () => {
     try {
@@ -207,16 +219,20 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.welcome}>Bienvenido</Text>
           <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
         </View>
-        <Image
-          source={{
-            uri:
-              user?.imagen_perfil ||
-              "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-          }}
-          style={styles.avatar}
-        />
-      </View>
 
+        {/* Avatar clickeable */}
+        <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
+          <Image
+            source={{
+              uri:
+                user?.imagen_perfil ||
+                "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            }}
+            style={styles.avatar}
+          />
+        </TouchableOpacity>
+      </View>
+      
       {/* BalanceCard */}
       <BalanceCard
         balance={balance}
@@ -264,12 +280,12 @@ export default function HomeScreen({ navigation }) {
       <CrearGrupoModal
         visible={modalCrearVisible}
         onClose={() => setModalCrearVisible(false)}
-        onCreate={crearGrupo}
         nombreGrupo={nombreGrupo}
         imagenGrupo={imagenGrupo}
         setNombreGrupo={setNombreGrupo}
         setImagenGrupo={setImagenGrupo}
       />
+
 
       {/* Modal Editar */}
       <EditarGrupoModal
