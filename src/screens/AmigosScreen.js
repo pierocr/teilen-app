@@ -54,6 +54,14 @@ export default function AmigosScreen() {
     obtenerAmigos();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      obtenerAmigos(); // Refresca automáticamente al volver
+    });
+  
+    return unsubscribe;
+  }, [navigation]);
+  
   // ─────────────────────────────────────────────────────────────────────────────
   // Pull-to-refresh
   // ─────────────────────────────────────────────────────────────────────────────
@@ -274,6 +282,8 @@ export default function AmigosScreen() {
       style={styles.container}
     >
       <Text style={styles.title}>Amigos</Text>
+      <Text style={styles.subTitle}>Agregar amigos:</Text>
+
 
       {/* 1. Búsqueda/autocomplete de usuarios */}
       <TextInput
@@ -315,19 +325,29 @@ export default function AmigosScreen() {
         </>
       )}
           {/* Botón de invitación por WhatsApp, para que siempre aparezca */}
-    <TouchableOpacity
-      style={styles.btnWhatsApp}
-      onPress={invitarPorWhatsApp}
-    >
-      <Text style={styles.btnWhatsAppText}>Invitar por WhatsApp</Text>
-    </TouchableOpacity>
+          <View style={styles.botonesContainer}>
+  <TouchableOpacity
+    style={styles.btnQR}
+    onPress={() => navigation.navigate("EscanearQR")}
+  >
+    <Text style={styles.btnQRText}>📷 Escanear QR</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.btnWhatsApp}
+    onPress={invitarPorWhatsApp}
+  >
+    <Text style={styles.btnWhatsAppText}>Invitar por WhatsApp</Text>
+  </TouchableOpacity>
+</View>
+
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#fff"},
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 12, textAlign: "center", paddingTop: 0 },
   subTitle: { fontSize: 18, fontWeight: "600", marginVertical: 8 },
   searchInput: {
     marginTop: 10,
@@ -419,4 +439,21 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
+  botonesContainer: {
+    marginTop: 20,
+    gap: 12,
+  },
+  btnQR: {
+    backgroundColor: "#2a5298",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  btnQRText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  
 });

@@ -15,6 +15,8 @@ import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
 import format from "../utils/format";
 import * as Updates from "expo-updates";
+import { Ionicons, MaterialIcons, FontAwesome } from "@expo/vector-icons";
+
 
 
 export default function CuentaScreen({ navigation }) {
@@ -23,9 +25,12 @@ export default function CuentaScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    obtenerPerfil();
-  }, []);
-
+    const unsubscribe = navigation.addListener("focus", () => {
+      obtenerPerfil();
+    });
+    return unsubscribe;
+  }, [navigation]);
+  
   const verificarActualizacion = async () => {
     try {
       const update = await Updates.checkForUpdateAsync();
@@ -92,15 +97,20 @@ export default function CuentaScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Mi Cuenta</Text>
 
-        {/* Mostramos siempre la foto proveniente de la BD (perfil.imagen_perfil). */}
-        <Image
-          source={{
-            uri: fotoPerfil,
-          }}
-          style={styles.avatar}
-        />
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: fotoPerfil }} style={styles.avatar} />
+        </View>
 
-        <View style={styles.infoContainer}>
+        {/* Datos */}
+        <View style={styles.card}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("EditarCuenta")}
+            style={styles.editIcon}
+          >
+            <Ionicons name="settings-outline" size={22} color="#555" />
+          </TouchableOpacity>
+
           <Dato label="Nombre" valor={perfil.nombre} />
           <Dato label="Correo" valor={perfil.correo} />
           <Dato label="Teléfono" valor={telefono} />
@@ -108,37 +118,64 @@ export default function CuentaScreen({ navigation }) {
           <Dato label="Fecha de nacimiento" valor={fechaNacimiento} />
         </View>
 
-        {/* Botón para ir a la pantalla de editar cuenta */}
-        <TouchableOpacity
-          style={styles.btnEditar}
-          onPress={() => navigation.navigate("EditarCuenta")}>
-          <Text style={styles.btnEditarText}>Editar Cuenta</Text>
-        </TouchableOpacity>
+        {/* Ajustes y opciones */}
+        <Text style={styles.subtitulo}>Opciones</Text>
+        <View style={styles.boxOpciones}>
+        <Opcion
+  label="Mi código QR"
+  icon="qr-code-outline"
+  onPress={() => navigation.navigate("CodigoQR")}
+/>
 
-        {/* Botón para cerrar sesión */}
-        <TouchableOpacity
-          style={styles.btnLogout}
-          onPress={logout}>
-          <Text style={styles.btnLogoutText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
+          <Opcion label="Teilen PRO – Próximamente" icon="diamond-outline" onPress={() => { }} />
 
-        <TouchableOpacity
-          style={{
-            marginTop: 20,
-            backgroundColor: "#2a5298",
-            padding: 12,
-            borderRadius: 10,
-            alignItems: "center",
-          }}
-          onPress={verificarActualizacion}
-        >
-          <Text style={{ color: "#fff", fontWeight: "bold" }}>Buscar Actualizaciones</Text>
-        </TouchableOpacity>
+          <Opcion label="Ajustes de notificación" icon="notifications-outline" onPress={() => { }} />
 
+          <Opcion label="Evaluar Teilen" icon="star-outline" onPress={() => { }} />
+
+          <Opcion
+            label="Contacta con la asistencia de Teilen"
+            icon="help-circle-outline"
+            onPress={() => { }}
+          />
+
+          <Opcion
+            label="Cerrar Sesión"
+            icon="log-out-outline"
+            onPress={logout}
+            estiloExtra={{ color: "#FF3B30" }}
+          />
+
+        </View>
+
+        {/* Pie de página legal */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Hecha con ❤️ y dedicación desde Chile</Text>
+          <Text style={styles.footerText}>Derechos reservados de autor 2025 Teilen, Inc.</Text>
+
+          <TouchableOpacity onPress={() => { }}>
+            <Text style={styles.footerLink}>Política de privacidad</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.footerVersion}>v1.12</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+const Opcion = ({ label, icon, iconPack = Ionicons, onPress, estiloExtra }) => (
+  <TouchableOpacity onPress={onPress} style={styles.opcion}>
+    <View style={styles.opcionInner}>
+      {React.createElement(iconPack, {
+        name: icon,
+        size: 20,
+        color: "#444",
+        style: { marginRight: 12 },
+      })}
+      <Text style={[styles.opcionText, estiloExtra]}>{label}</Text>
+    </View>
+  </TouchableOpacity>
+);
 
 const Dato = ({ label, valor }) => (
   <View style={styles.datoRow}>
@@ -207,4 +244,136 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
+  avatarContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: "#2a5298",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  card: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  avatarContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: "#2a5298",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  card: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  boxOpciones: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingVertical: 6,
+    marginBottom: 30,
+    marginTop: 10,
+    paddingHorizontal: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  opcion: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomColor: "#eee",
+    borderBottomWidth: 1,
+  },
+  opcionText: {
+    fontSize: 15,
+    color: "#333",
+  },
+  footer: {
+    alignItems: "center",
+    paddingBottom: 40,
+  },
+  footerText: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  footerLink: {
+    fontSize: 13,
+    color: "#2a5298",
+    marginTop: 8,
+    fontWeight: "600",
+  },
+  footerVersion: {
+    fontSize: 12,
+    color: "#aaa",
+    marginTop: 4,
+  },
+  subtitulo: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#444",
+    alignSelf: "flex-start",
+    marginBottom: 6,
+    marginLeft: 10,
+    marginTop: 10,
+  },
+  btnEditarCompacto: {
+    alignSelf: "stretch",
+    backgroundColor: "#2a5298",
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    marginHorizontal: 10,
+  },
+  editIcon: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+  },
+  editIconText: {
+    fontSize: 20,
+  },
+  opcionInner: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
 });

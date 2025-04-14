@@ -14,6 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import API_URL from "../config";
+import { seleccionarYPrepararImagen } from "../utils/subirImagen";
 
 export default function CrearGrupoModal({
   visible,
@@ -26,6 +27,7 @@ export default function CrearGrupoModal({
   const [amigos, setAmigos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [formDataImagen, setFormDataImagen] = useState(null);
 
   // 🔐 Nuevo estado para impedir que se cree el grupo dos veces
   const [creando, setCreando] = useState(false);
@@ -63,17 +65,14 @@ export default function CrearGrupoModal({
 
   // Seleccionar imagen desde la galería
   const seleccionarImagen = async () => {
-    const resultado = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-
-    if (!resultado.canceled) {
-      setImagenUri(resultado.assets[0].uri);
-    }
+    const resultado = await seleccionarYPrepararImagen();
+  
+    if (!resultado) return;
+  
+    setImagenUri(resultado.uriPreview);         // para mostrar en la UI
+    setFormDataImagen(resultado.formData);      // para enviar al backend
   };
+  
 
   // Marcar/desmarcar un amigo
   const toggleSeleccion = (id) => {
@@ -86,25 +85,19 @@ export default function CrearGrupoModal({
 
   // Subir imagen al bucket "grupos" en Supabase
   const subirImagenAGrupo = async () => {
-    if (!imagenUri) return null; // Si no se eligió imagen, devolvemos null
+    if (!formDataImagen) return null; // Asegurarse que se haya preparado la imagen
+  
     try {
       setSubiendo(true);
       const token = await AsyncStorage.getItem("token");
-      const formData = new FormData();
-
-      formData.append("imagen", {
-        uri: imagenUri,
-        type: "image/jpeg",
-        name: "grupo.jpg",
-      });
-
-      const resp = await axios.post(`${API_URL}/grupos/imagen`, formData, {
+  
+      const resp = await axios.post(`${API_URL}/grupos/imagen`, formDataImagen, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
-
+  
       return resp.data.url;
     } catch (error) {
       console.error("❌ Error al subir imagen de grupo:", error);
@@ -112,7 +105,7 @@ export default function CrearGrupoModal({
     } finally {
       setSubiendo(false);
     }
-  };
+  };  
 
   // Handler al presionar "Crear"
 const handleCrear = async () => {

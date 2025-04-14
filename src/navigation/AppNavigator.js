@@ -22,6 +22,11 @@ import EditarCuentaScreen from "../screens/EditarCuentaScreen";
 import LoadingScreen from "../screens/LoadingScreen"; // ¡OJO! Asegúrate de tener este archivo
 import InvitacionScreen from "../screens/InvitacionScreen";
 import AgregarParticipanteScreen from "../screens/AgregarParticipanteScreen";
+import EditarGastoScreen from "../screens/EditarGastoScreen";
+import CodigoQRScreen from "../screens/CodigoQRScreen";
+import EscanearQRScreen from "../screens/EscanearQRScreen";
+
+
 import * as Linking from "expo-linking";
 
 import { AuthContext } from "../context/AuthContext";
@@ -65,6 +70,11 @@ function HomeStack() {
         component={GastoDetalleScreen}
         options={{ title: "Detalle del Gasto" }}
       />
+      <Stack.Screen
+        name="EditarGasto"
+        component={EditarGastoScreen}
+        options={{ title: "Editar Gasto" }}
+      />
       {/* 2) Agregar la nueva pantalla */}
       <Stack.Screen
         name="AgregarParticipante"
@@ -81,13 +91,19 @@ function AmigosStack() {
       <Stack.Screen
         name="AmigosMain"
         component={AmigosScreen}
-        options={{ title: "Amigos", headerShown: false  }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AmigoDetalle"
         component={AmigoDetalleScreen}
-        options={{ title: "Detalle del Amigo"}}
+        options={{ title: "Detalle del Amigo" }}
       />
+      <Stack.Screen
+  name="EscanearQR"
+  component={EscanearQRScreen}
+  options={{ title: "Escanear código QR" }}
+/>
+
     </Stack.Navigator>
   );
 }
@@ -98,12 +114,17 @@ function CuentaStack() {
       <Stack.Screen
         name="CuentaMain"
         component={CuentaScreen}
-        options={{ title: "Mi Cuenta" }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="EditarCuenta"
         component={EditarCuentaScreen}
         options={{ title: "Editar Cuenta" }}
+      />
+      <Stack.Screen
+        name="CodigoQR"
+        component={CodigoQRScreen}
+        options={{ title: "Mi código QR" }}
       />
     </Stack.Navigator>
   );
