@@ -1,14 +1,8 @@
 import React, { useEffect, useState, useContext } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import { Camera, CameraView } from "expo-camera"; // ✅ Importar ambos
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { Camera, CameraView } from "expo-camera";
 import { AuthContext } from "../context/AuthContext";
-import API_URL from "../config"; // importas tu variable global
+import API_URL from "../config";
 
 export default function EscanearQRScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -20,22 +14,25 @@ export default function EscanearQRScreen({ navigation }) {
   useEffect(() => {
     (async () => {
       console.log("⌛ Pidiendo permiso cámara...");
-      const { status } = await Camera.requestCameraPermissionsAsync(); // ✅ usar Camera
-      console.log("✔️ Permiso finalizado:", status);
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      console.log("📸 Permiso cámara:", status);
       setHasPermission(status === "granted");
     })();
   }, []);
-  
 
-  // Handler para el evento de escaneo
-  const handleBarCodeScanned = async ({ type, data }) => {
-    // Evitamos lecturas múltiples
-    if (scanned) return;
+  const handleBarcodeScanned = async ({ type, data }) => {
+    console.log("📦 Escaneado:", type, data);
+    
+    if (!data || scanned) return;
+  
+    // Validar tipo (puede ser 'qr' o 'org.iso.QRCode')
+    const acceptedTypes = ["qr", "org.iso.QRCode"];
+    if (!acceptedTypes.includes(type.toLowerCase())) return;
+  
     setScanned(true);
     setCargando(true);
-
+  
     try {
-      // Consumimos tu endpoint /amigos
       const resp = await fetch(`${API_URL}/amigos`, {
         method: "POST",
         headers: {
@@ -44,15 +41,15 @@ export default function EscanearQRScreen({ navigation }) {
         },
         body: JSON.stringify({ amigo_id: parseInt(data) }),
       });
-
+  
       const result = await resp.json();
-
+  
       if (!resp.ok) {
         Alert.alert("Error", result.mensaje || "No se pudo agregar el amigo.");
         setScanned(false);
         return;
       }
-
+  
       Alert.alert("🎉 Amigo agregado", "Se ha agregado correctamente.");
       navigation.goBack();
     } catch (error) {
@@ -62,12 +59,14 @@ export default function EscanearQRScreen({ navigation }) {
     } finally {
       setCargando(false);
     }
-  };
+  };  
 
-  // Manejo de permisos
   if (hasPermission === null) {
-    return <Text style={styles.textAviso}>Solicitando permiso de cámara...</Text>;
+    return (
+      <Text style={styles.textAviso}>Solicitando permiso de cámara...</Text>
+    );
   }
+
   if (hasPermission === false) {
     return <Text style={styles.textAviso}>Permiso de cámara denegado</Text>;
   }
@@ -76,15 +75,14 @@ export default function EscanearQRScreen({ navigation }) {
     <View style={styles.container}>
       <Text style={styles.titulo}>Escanea un código QR</Text>
 
-      {/* Al escanear un QR, llama a handleBarCodeScanned
-          Solo escanea si 'scanned' está en false */}
       <CameraView
-        style={styles.camera}
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-        barCodeScannerSettings={{
-          barCodeTypes: ["qr"], // Solo busca QR
-        }}
-      />
+  style={styles.camera}
+  type="back"
+  onBarcodeScanned={handleBarcodeScanned}
+>
+  <Text style={{ color: "white" }}>Escaneando...</Text>
+</CameraView>
+
 
       <Text style={styles.texto}>
         Alinea el código QR dentro del recuadro para escanearlo

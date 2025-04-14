@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "teilen-app",
+    "name": "Teilen",
     "slug": "teilen-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,9 +17,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.pierocr.teilenapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,7 +36,6 @@
     "updates": {
       "url": "https://u.expo.dev/036d3e26-f4c4-448f-92a5-688e9e8211e5"
     },
-    "plugins": [
-    ]
+    "plugins": []
   }
 }
