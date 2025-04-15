@@ -215,41 +215,41 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.welcome}>Bienvenido</Text>
-          <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
-        </View>
+  {/* Avatar a la izquierda */}
+  <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
+    <Image
+      source={{
+        uri: user?.imagen_perfil || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      }}
+      style={styles.avatar}
+    />
+  </TouchableOpacity>
 
-        {/* Avatar clickeable */}
-        <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
-          <Image
-            source={{
-              uri:
-                user?.imagen_perfil ||
-                "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-            }}
-            style={styles.avatar}
-          />
-        </TouchableOpacity>
-      </View>
-      
+  {/* Info de usuario al lado */}
+  <View style={styles.userInfo}>
+    <Text style={styles.saludo}>Hola</Text>
+    <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
+    <Text style={styles.subtextoUsuario}>Administrador de tus grupos</Text>
+  </View>
+</View>
       {/* BalanceCard */}
       <BalanceCard
         balance={balance}
         totalAFavor={totalAFavor}
         totalAdeudado={totalAdeudado}
       />
-
-      {/* Botón Nuevo Grupo */}
-      <TouchableOpacity
-        style={styles.botonNuevoGrupo}
-        onPress={() => setModalCrearVisible(true)}
-      >
-        <Text style={styles.textoBotonNuevoGrupo}>+ Nuevo Grupo</Text>
-      </TouchableOpacity>
-
+      
       {/* Título sección */}
-      <Text style={styles.sectionTitle}>Grupos</Text>
+      <View style={styles.headerGrupos}>
+  <Text style={styles.sectionTitle}>Grupos</Text>
+  <TouchableOpacity
+    style={styles.botonNuevoGrupo}
+    onPress={() => setModalCrearVisible(true)}
+  >
+    <Text style={styles.textoBotonNuevoGrupo}>+ Nuevo Grupo</Text>
+  </TouchableOpacity>
+</View>
+
 
       {loading ? (
         // CAMBIO: antes tenías <Text>Cargando...</Text>
@@ -319,20 +319,21 @@ const styles = StyleSheet.create({
   avatar: { width: 50, height: 50, borderRadius: 25 },
   botonNuevoGrupo: {
     backgroundColor: "#2a5298",
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignSelf: "center",
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 2,
     elevation: 2,
   },
   textoBotonNuevoGrupo: {
+    fontSize: 14,
+    fontWeight: "500",
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
   sectionTitle: {
     fontSize: 18,
@@ -342,4 +343,45 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ccc",
     paddingBottom: 4,
   },
+  saludo: {
+    fontSize: 14,
+    color: "#888",
+  },
+  userInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  subtextoUsuario: {
+    fontSize: 13,
+    color: "#999",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerGrupos: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    marginTop: 10,
+  },
+  botonNuevoGrupo: {
+    backgroundColor: "#2a5298",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  textoBotonNuevoGrupo: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  
+  
 });

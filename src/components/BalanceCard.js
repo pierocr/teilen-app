@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function BalanceCard({ balance, totalAFavor, totalAdeudado }) {
@@ -31,23 +31,23 @@ export default function BalanceCard({ balance, totalAFavor, totalAdeudado }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 20,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 10, // menos espacio para el botón de grupo
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   balanceText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     color: "white",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   secondaryText: {
-    fontSize: 15,
+    fontSize: 16,
     color: "white",
-  },
+  },  
 });
