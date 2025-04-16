@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity} from "react-native";
+import { Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import MCIcon from "react-native-vector-icons/MaterialCommunityIcons";
 
 export default function BalanceCard({ balance, totalAFavor, totalAdeudado }) {
   const formatear = (num) =>
@@ -19,11 +20,13 @@ export default function BalanceCard({ balance, totalAFavor, totalAdeudado }) {
   }
 
   return (
-    
     <LinearGradient colors={["#2a8873", "#1b6db2"]} style={styles.card}>
+      {/* Ícono de billetera en la esquina superior derecha */}
+      <MCIcon name="wallet-outline" size={30} color="white" style={styles.iconWallet} />
+      
       <Text style={styles.balanceText}>{balanceLabel}</Text>
       <Text style={styles.secondaryText}>
-        A favor: ${formatear(totalAFavor)} | Adeudado: ${formatear(totalAdeudado)}
+        A favor: ${formatear(totalAFavor)}  |  Adeudado: ${formatear(totalAdeudado)}
       </Text>
     </LinearGradient>
   );
@@ -33,12 +36,13 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     padding: 24,
-    marginBottom: 10, // menos espacio para el botón de grupo
+    marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4,
+    position: "relative",
   },
   balanceText: {
     fontSize: 24,
@@ -49,5 +53,10 @@ const styles = StyleSheet.create({
   secondaryText: {
     fontSize: 16,
     color: "white",
-  },  
+  },
+  iconWallet: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+  },
 });

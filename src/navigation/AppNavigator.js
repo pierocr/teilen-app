@@ -25,7 +25,7 @@ import AgregarParticipanteScreen from "../screens/AgregarParticipanteScreen";
 import EditarGastoScreen from "../screens/EditarGastoScreen";
 import CodigoQRScreen from "../screens/CodigoQRScreen";
 import EscanearQRScreen from "../screens/EscanearQRScreen";
-
+import ConfiguracionGrupo from "../screens/ConfiguracionGrupo";
 
 import * as Linking from "expo-linking";
 
@@ -35,7 +35,6 @@ export const navigationRef = createNavigationContainerRef();
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-
 
 const linking = {
   prefixes: ["teilenapp://"],
@@ -81,6 +80,11 @@ function HomeStack() {
         component={AgregarParticipanteScreen}
         options={{ title: "Añadir Participante" }}
       />
+      <Stack.Screen
+        name="ConfiguracionGrupo"
+        component={ConfiguracionGrupo}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
@@ -99,11 +103,10 @@ function AmigosStack() {
         options={{ title: "Detalle del Amigo" }}
       />
       <Stack.Screen
-  name="EscanearQR"
-  component={EscanearQRScreen}
-  options={{ title: "Escanear código QR" }}
-/>
-
+        name="EscanearQR"
+        component={EscanearQRScreen}
+        options={{ title: "Escanear código QR" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -157,7 +160,6 @@ function AuthStack() {
   );
 }
 
-
 export default function AppNavigator() {
   const { user, isLoading } = useContext(AuthContext);
 
@@ -175,8 +177,10 @@ export default function AppNavigator() {
               let iconName;
               if (route.name === "Grupos") iconName = "people-outline";
               else if (route.name === "Amigos") iconName = "person-add-outline";
-              else if (route.name === "Actividad") iconName = "stats-chart-outline";
-              else if (route.name === "Cuenta") iconName = "person-circle-outline";
+              else if (route.name === "Actividad")
+                iconName = "stats-chart-outline";
+              else if (route.name === "Cuenta")
+                iconName = "person-circle-outline";
               return <Ionicons name={iconName} size={size} color={color} />;
             },
             headerShown: false,

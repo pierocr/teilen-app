@@ -1,58 +1,59 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { monto } from '../utils/format';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import React from "react";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { monto } from "../utils/format";
+import { Menu, MenuOptions, MenuOption, MenuTrigger } from "react-native-popup-menu";
+import MCIcon from "react-native-vector-icons/MaterialCommunityIcons";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
-  const [tooltip, setTooltip] = useState(null);
   const { id, nombre, imagen, total_gastado, total_adeudado, total_pagado } = grupo;
 
-  const mostrarTooltip = (mensaje, tipo) => {
-    setTooltip({ mensaje, tipo });
-    setTimeout(() => setTooltip(null), 1500);
-  };
-
   return (
-    <TouchableOpacity onPress={() => onPress(id, nombre)}>
-      <View style={styles.container}>
-        <View style={styles.infoContainer}>
-          <Image
-            source={
-              imagen && imagen !== "default"
-                ? { uri: imagen }
-                : require("../assets/image.png") // imagen local por defecto
-            }
-            style={styles.avatar}
-          />
-          <View style={styles.textContainer}>
-            <Text style={styles.nombre}>{nombre}</Text>
-            <Text style={styles.total}>Total: {monto(total_gastado)}</Text>
-            <Text style={styles.deuda}>Debes: {monto(total_adeudado)}</Text>
-            <Text style={styles.favor}>Te deben: {monto(total_pagado)}</Text>
-          </View>
+    <TouchableOpacity style={styles.itemContainer} onPress={() => onPress(id, nombre)}>
+      <View style={styles.innerContainer}>
+        {/* Avatar del grupo */}
+        <Image
+          source={
+            imagen && imagen !== "default"
+              ? { uri: imagen }
+              : require("../assets/image.png")
+          }
+          style={styles.avatar}
+        />
+        
+        {/* Información textual */}
+        <View style={styles.textContainer}>
+          <Text style={styles.nombre}>{nombre}</Text>
+          <Text style={styles.totales}>
+            Total: {monto(total_gastado)} | Debes: {monto(total_adeudado)}
+          </Text>
+          <Text style={styles.totales}>
+            Te deben: {monto(total_pagado)}
+          </Text>
+        </View>
 
-          <View style={styles.botonesContainer}>
-            <TouchableOpacity
-              onPress={() => onEditar(grupo)}
-              onLongPress={() => mostrarTooltip("Editar", "editar")}
-              style={styles.iconButton}
-            >
-              <Icon name="edit" size={24} color="#4CAF50" />
-              {tooltip?.tipo === 'editar' && (
-                <Text style={styles.tooltipText}>{tooltip.mensaje}</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => onEliminar(grupo.id)}
-              onLongPress={() => mostrarTooltip("Eliminar", "eliminar")}
-              style={styles.iconButton}
-            >
-              <Icon name="delete" size={24} color="#F44336" />
-              {tooltip?.tipo === 'eliminar' && (
-                <Text style={styles.tooltipText}>{tooltip.mensaje}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+        {/* Menú y chevron */}
+        <View style={styles.menuContainer}>
+          <Menu>
+            <MenuTrigger>
+              <MCIcon name="dots-vertical" size={24} color="#666" />
+            </MenuTrigger>
+            <MenuOptions customStyles={menuStyles}>
+              <MenuOption onSelect={() => onEditar(grupo)}>
+                <View style={styles.menuItem}>
+                  <MCIcon name="pencil-outline" size={20} color="#2a5298" style={{ marginRight: 8 }} />
+                  <Text style={styles.menuText}>Editar</Text>
+                </View>
+              </MenuOption>
+              <MenuOption onSelect={() => onEliminar(id)}>
+                <View style={styles.menuItem}>
+                  <MCIcon name="trash-can-outline" size={20} color="#F44336" style={{ marginRight: 8 }} />
+                  <Text style={styles.menuText}>Eliminar</Text>
+                </View>
+              </MenuOption>
+            </MenuOptions>
+          </Menu>
+          <Ionicons name="chevron-forward-outline" size={20} color="#ccc" style={styles.chevron} />
         </View>
       </View>
     </TouchableOpacity>
@@ -60,74 +61,73 @@ const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#F0F4F8',
-    borderRadius: 5,
-    marginVertical: 8,
-    padding: 10,
-    elevation: 0,
+  itemContainer: {
+    backgroundColor: "#fff", // fondo blanco para el item
+    borderRadius: 10,
+    marginVertical: 6,
+    marginHorizontal: 2,
+    padding: 12,
+    // Sombras para iOS y Android
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  innerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
+    width: 60,
+    height: 60,
+    borderRadius: 8,
     marginRight: 12,
   },
   textContainer: {
     flex: 1,
-    justifyContent: 'center',
   },
   nombre: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
   },
-  total: {
-    fontSize: 14,
-    color: '#555',
+  totales: {
+    fontSize: 13,
+    color: "#666",
   },
-  deuda: {
-    fontSize: 14,
-    color: 'red',
+  menuContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  favor: {
-    fontSize: 14,
-    color: 'green',
+  chevron: {
+    marginLeft: 4,
   },
-  botonesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
-  iconButton: {
-    marginHorizontal: 4,
-    padding: 6,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+  menuText: {
+    fontSize: 16,
+    color: "#333",
   },
-  tooltipText: {
-    position: 'absolute',
-    left: 0,
-    top: 40,
-    backgroundColor: '#eee',
-    borderRadius: 4,
-    fontSize: 12,
-    color: '#333',
-    zIndex: 10,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    minWidth: 50,
-    textAlign: 'center',
-  }
 });
+
+const menuStyles = {
+  optionsContainer: {
+    backgroundColor: "#fff",
+    padding: 6,
+    borderRadius: 8,
+    width: 140,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+};
 
 export default GrupoItem;

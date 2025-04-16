@@ -3,48 +3,46 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
-  FlatList,
   Alert,
   RefreshControl,
   TouchableOpacity,
   Image,
   StyleSheet,
-  ActivityIndicator, // CAMBIO: importamos ActivityIndicator
+  ActivityIndicator,
+  FlatList,
 } from "react-native";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import API_URL from "../config";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import * as Progress from "react-native-progress";
 
 import BalanceCard from "../components/BalanceCard";
 import GrupoItem from "../components/GrupoItem";
 import CrearGrupoModal from "../components/CrearGrupoModal";
 import EditarGrupoModal from "../components/EditarGrupoModal";
-
-
+import InfoModal from "../components/InfoModal";
 
 export default function HomeScreen({ navigation }) {
-
   const { user } = useContext(AuthContext);
-
   const [grupos, setGrupos] = useState([]);
-  // RECUERDA: 'loading' ya existe y lo iniciamos en true
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Balance general del usuario
   const [balance, setBalance] = useState(0);
+  const progresoPago =
+    totalAdeudado + totalAFavor > 0
+      ? totalAFavor / (totalAdeudado + totalAFavor)
+      : 0;
   const [totalAFavor, setTotalAFavor] = useState(0);
   const [totalAdeudado, setTotalAdeudado] = useState(0);
 
-  // Modal Crear
   const [modalCrearVisible, setModalCrearVisible] = useState(false);
+  const [modalEditarVisible, setModalEditarVisible] = useState(false);
+  const [modalInfoVisible, setModalInfoVisible] = useState(false);
+
   const [nombreGrupo, setNombreGrupo] = useState("");
   const [imagenGrupo, setImagenGrupo] = useState("");
-
-  // Modal Editar
-  const [modalEditarVisible, setModalEditarVisible] = useState(false);
   const [grupoIdEdit, setGrupoIdEdit] = useState(null);
   const [nombreGrupoEdit, setNombreGrupoEdit] = useState("");
   const [imagenGrupoEdit, setImagenGrupoEdit] = useState("");
@@ -55,14 +53,10 @@ export default function HomeScreen({ navigation }) {
       cargarDatos();
     }
   }, [modalCrearVisible]);
-  
 
   const cargarDatos = async () => {
     setLoading(true);
-    await Promise.all([
-      obtenerGrupos(),
-      obtenerBalance(), // Llamamos ambos en paralelo
-    ]);
+    await Promise.all([obtenerGrupos(), obtenerBalance()]);
     setLoading(false);
   };
 
@@ -71,32 +65,20 @@ export default function HomeScreen({ navigation }) {
       const response = await axios.get(`${API_URL}/grupos`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-
       const gruposOrdenados = response.data.sort((a, b) => b.id - a.id);
-      setGrupos(gruposOrdenados);
-      
       setGrupos(gruposOrdenados);
     } catch (error) {
       Alert.alert("Error", "No se pudieron obtener los grupos.");
-      console.error("Error al obtener grupos:", error);
     }
-  };  
+  };
 
   const obtenerBalance = async () => {
     try {
       const response = await axios.get(`${API_URL}/usuarios/resumen`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-
-      const {
-        total_a_favor,
-        total_adeudado,
-        total_por_cobrar,
-      } = response.data;
-
-      const balanceCalculado =
-        (total_por_cobrar || 0) - (total_adeudado || 0);
-
+      const { total_a_favor, total_adeudado, total_por_cobrar } = response.data;
+      const balanceCalculado = (total_por_cobrar || 0) - (total_adeudado || 0);
       setBalance(balanceCalculado);
       setTotalAFavor(total_a_favor);
       setTotalAdeudado(total_adeudado);
@@ -112,28 +94,23 @@ export default function HomeScreen({ navigation }) {
   };
 
   const crearGrupo = async () => {
-    try {
-      if (!nombreGrupo.trim()) {
-        Alert.alert("Error", "El nombre del grupo es obligatorio");
-        return;
-      }
+    if (!nombreGrupo.trim()) {
+      Alert.alert("Error", "El nombre del grupo es obligatorio");
+      return;
+    }
 
+    try {
       const response = await axios.post(
         `${API_URL}/grupos`,
         { nombre: nombreGrupo, imagen: imagenGrupo },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
-
-      setGrupos([...grupos, response.data]);
       setModalCrearVisible(false);
       setNombreGrupo("");
       setImagenGrupo("");
-      // Volvemos a cargar balance y grupos
       await cargarDatos();
-
       Alert.alert("Éxito", "Grupo creado correctamente");
-    } catch (error) {
-      console.error(error);
+    } catch {
       Alert.alert("Error", "No se pudo crear el grupo");
     }
   };
@@ -145,8 +122,7 @@ export default function HomeScreen({ navigation }) {
       });
       await cargarDatos();
       Alert.alert("Éxito", "Grupo eliminado correctamente");
-    } catch (err) {
-      console.error(err);
+    } catch {
       Alert.alert("Error", "No se pudo eliminar el grupo.");
     }
   };
@@ -172,8 +148,7 @@ export default function HomeScreen({ navigation }) {
           },
         ]
       );
-    } catch (error) {
-      console.error(error);
+    } catch {
       Alert.alert("Error", "No se pudo verificar las deudas.");
     }
   };
@@ -185,76 +160,130 @@ export default function HomeScreen({ navigation }) {
     setModalEditarVisible(true);
   };
 
-  const editarGrupo = async () => {
+  const editarGrupo = async (nuevoNombre, nuevaImagen, grupoId) => {
     try {
-      if (!nombreGrupoEdit.trim()) {
-        Alert.alert("Error", "El nombre del grupo es obligatorio");
-        return;
-      }
-
       await axios.put(
-        `${API_URL}/grupos/${grupoIdEdit}`,
-        { nombre: nombreGrupoEdit, imagen: imagenGrupoEdit },
+        `${API_URL}/grupos/${grupoId}`,
+        { nombre: nuevoNombre, imagen: nuevaImagen },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
-
       setModalEditarVisible(false);
       await cargarDatos();
       Alert.alert("Éxito", "Grupo actualizado");
     } catch (error) {
-      console.error(error);
+      console.error("❌ Error al editar grupo:", error);
       Alert.alert("Error", "No se pudo editar el grupo.");
     }
   };
 
-  const irADetalleGrupo = (grupoId, grupoNombre) => {
-    navigation.navigate("GrupoDetalle", { grupoId, grupoNombre });
-  };
+  const irADetalleGrupo = (grupoId, grupoNombre, grupoImagen) => {
+    navigation.navigate("GrupoDetalle", { grupoId, grupoNombre, grupoImagen });
+  };  
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* Header usuario */}
       <View style={styles.header}>
-  {/* Avatar a la izquierda */}
-  <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
-    <Image
-      source={{
-        uri: user?.imagen_perfil || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-      }}
-      style={styles.avatar}
-    />
-  </TouchableOpacity>
+      {/* Avatar a la izquierda */}
+      <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
+        <Image
+          source={{
+            uri:
+              user?.imagen_perfil ||
+              "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+          }}
+          style={styles.avatar}
+        />
+      </TouchableOpacity>
 
-  {/* Info de usuario al lado */}
-  <View style={styles.userInfo}>
-    <Text style={styles.saludo}>Hola</Text>
-    <Text style={styles.nombreUsuario}>{user.nombreCompleto}</Text>
-    <Text style={styles.subtextoUsuario}>Administrador de tus grupos</Text>
-  </View>
-</View>
-      {/* BalanceCard */}
+      {/* Texto "Hola Piero Alonso" en el centro (o justificado a la izquierda) */}
+      <View style={styles.userInfo}>
+        <Text style={styles.greeting}>
+          Hola, <Text style={styles.nombreUsuario}>{user?.nombreCompleto || "Usuario"}</Text>
+        </Text>
+      </View>
+
+      {/* Ícono de notificaciones a la derecha */}
+      <TouchableOpacity onPress={() => console.log("Notificaciones")}>
+        <Ionicons name="notifications-outline" size={22} color="#666" />
+      </TouchableOpacity>
+    </View>
+
       <BalanceCard
         balance={balance}
         totalAFavor={totalAFavor}
         totalAdeudado={totalAdeudado}
       />
-      
-      {/* Título sección */}
-      <View style={styles.headerGrupos}>
-  <Text style={styles.sectionTitle}>Grupos</Text>
-  <TouchableOpacity
-    style={styles.botonNuevoGrupo}
-    onPress={() => setModalCrearVisible(true)}
-  >
-    <Text style={styles.textoBotonNuevoGrupo}>+ Nuevo Grupo</Text>
-  </TouchableOpacity>
-</View>
 
+      <View style={styles.estadoResumen}>
+        <Ionicons
+          name={
+            balance === 0
+              ? "checkmark-circle-outline"
+              : balance > 0
+              ? "happy-outline"
+              : "trending-down-outline"
+          }
+          size={20}
+          color={balance === 0 ? "green" : balance > 0 ? "#4CAF50" : "#e53935"}
+          style={{ marginRight: 6 }}
+        />
+        <Text style={styles.estadoTexto}>
+          {balance === 0
+            ? "¡Todas tus deudas están saldadas! 🎉"
+            : balance > 0
+            ? "¡Estás en positivo! Tus amigos te deben dinero 😎"
+            : "Aún tienes deudas por saldar, ¡tú puedes!"}
+        </Text>
+      </View>
+      {/* <View style={styles.progressContainer}>
+  <Text style={styles.progressLabel}>Progreso de pagos:</Text>
+  <Progress.Bar
+    progress={progresoPago}
+    width={null}
+    height={10}
+    borderRadius={8}
+    color="#4CAF50"
+    unfilledColor="#E0E0E0"
+    borderWidth={0}
+  />
+  <Text style={styles.progressTexto}>
+    {Math.round(progresoPago * 100)}% del total está saldado
+  </Text>
+</View> */}
+
+      {/* Encabezado de Grupos */}
+      <View style={styles.headerGrupos}>
+        <View style={styles.tituloGrupos}>
+          <Text style={styles.sectionTitle}>Grupos</Text>
+          <TouchableOpacity onPress={() => setModalInfoVisible(true)}>
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color="#2a5298"
+              style={{ marginLeft: 6 }}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.botonNuevoGrupo}
+          onPress={() => setModalCrearVisible(true)}
+        >
+          <View style={styles.contenidoBoton}>
+            <Ionicons
+              name="add-circle-outline"
+              size={18}
+              color="#fff"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.textoBotonNuevoGrupo}>Nuevo Grupo</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
-        // CAMBIO: antes tenías <Text>Cargando...</Text>
-        // Ahora mostramos un spinner y un mensaje
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#999" />
           <Text style={{ marginTop: 10 }}>Cargando grupos...</Text>
         </View>
@@ -266,17 +295,18 @@ export default function HomeScreen({ navigation }) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           renderItem={({ item }) => (
-            <GrupoItem
-              grupo={item}
-              onPress={() => irADetalleGrupo(item.id, item.nombre)}
-              onEditar={abrirModalEditarGrupo}
-              onEliminar={confirmarEliminarGrupo}
-            />
+<GrupoItem
+  grupo={item}
+  onPress={() => irADetalleGrupo(item.id, item.nombre, item.imagen)}
+  onEditar={abrirModalEditarGrupo}
+  onEliminar={confirmarEliminarGrupo}
+/>
+
           )}
         />
       )}
 
-      {/* Modal Crear */}
+      {/* Modales */}
       <CrearGrupoModal
         visible={modalCrearVisible}
         onClose={() => setModalCrearVisible(false)}
@@ -286,8 +316,6 @@ export default function HomeScreen({ navigation }) {
         setImagenGrupo={setImagenGrupo}
       />
 
-
-      {/* Modal Editar */}
       <EditarGrupoModal
         visible={modalEditarVisible}
         onClose={() => setModalEditarVisible(false)}
@@ -296,6 +324,14 @@ export default function HomeScreen({ navigation }) {
         imagenGrupo={imagenGrupoEdit}
         setNombreGrupo={setNombreGrupoEdit}
         setImagenGrupo={setImagenGrupoEdit}
+        grupoId={grupoIdEdit}
+      />
+
+      <InfoModal
+        visible={modalInfoVisible}
+        onClose={() => setModalInfoVisible(false)}
+        title="¿Qué son los grupos?"
+        description="Los grupos te permiten organizar gastos compartidos con amigos, familia o compañeros de trabajo. Puedes añadir participantes, registrar gastos y dividirlos fácilmente."
       />
     </SafeAreaView>
   );
@@ -310,55 +346,29 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  welcome: { fontSize: 16, color: "#666" },
-  nombreUsuario: { fontSize: 20, fontWeight: "bold" },
-  avatar: { width: 50, height: 50, borderRadius: 25 },
-  botonNuevoGrupo: {
-    backgroundColor: "#2a5298",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignSelf: "center",
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  textoBotonNuevoGrupo: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#fff",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    paddingBottom: 4,
-  },
-  saludo: {
-    fontSize: 14,
-    color: "#888",
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   userInfo: {
     flex: 1,
     marginLeft: 12,
   },
+  saludo: {
+    fontSize: 14,
+    color: "#888",
+  },
+  nombreUsuario: {
+    fontSize: 25,
+    fontWeight: "bold",
+  },
   subtextoUsuario: {
     fontSize: 13,
     color: "#999",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
   },
   headerGrupos: {
     flexDirection: "row",
@@ -367,21 +377,90 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 10,
   },
+  tituloGrupos: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
   botonNuevoGrupo: {
     backgroundColor: "#2a5298",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
+  contenidoBoton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   textoBotonNuevoGrupo: {
-    color: "#fff",
     fontSize: 14,
     fontWeight: "500",
+    color: "#fff",
   },
-  sectionTitle: {
-    fontSize: 18,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  estadoResumen: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E6F4EA",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  estadoTexto: {
+    fontSize: 14,
+    color: "#2a6e3f",
+  },
+  progressContainer: {
+    marginBottom: 16,
+  },
+  progressLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 6,
+  },
+  progressTexto: {
+    marginTop: 6,
+    fontSize: 13,
+    color: "#444",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+    elevation: 0, // pequeña sombra, opcional
+  },
+  rowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  nameContainer: {
+    marginLeft: 12,
+  },
+  nombreUsuario: {
     fontWeight: "bold",
   },
-  
-  
+  userInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  greeting: {
+    fontSize: 20,
+    color: "#333",
+  },
 });
