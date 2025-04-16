@@ -6,12 +6,24 @@ import MCIcon from "react-native-vector-icons/MaterialCommunityIcons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
-  const { id, nombre, imagen, total_gastado, total_adeudado, total_pagado } = grupo;
+  const {
+    id,
+    nombre,
+    imagen,
+    total_gastado = 0,
+    total_adeudado = 0,
+    total_pagado = 0,
+    total_por_cobrar = 0,
+    total_recibido = 0,
+  } = grupo;
+
+  const debes = Math.max(total_adeudado - total_pagado, 0);
+  const teDeben = Math.max(total_por_cobrar - total_recibido, 0);
 
   return (
     <TouchableOpacity style={styles.itemContainer} onPress={() => onPress(id, nombre)}>
       <View style={styles.innerContainer}>
-        {/* Avatar del grupo */}
+        {/* Imagen del grupo */}
         <Image
           source={
             imagen && imagen !== "default"
@@ -20,19 +32,16 @@ const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
           }
           style={styles.avatar}
         />
-        
-        {/* Información textual */}
+
+        {/* Información del grupo */}
         <View style={styles.textContainer}>
           <Text style={styles.nombre}>{nombre}</Text>
-          <Text style={styles.totales}>
-            Total: {monto(total_gastado)} | Debes: {monto(total_adeudado)}
-          </Text>
-          <Text style={styles.totales}>
-            Te deben: {monto(total_pagado)}
-          </Text>
+          <Text style={styles.totales}>Debes: {monto(debes)}</Text>
+          <Text style={styles.totales}>Te deben: {monto(teDeben)}</Text>
+          <Text style={styles.totales}>Total: {monto(total_gastado)}</Text>
         </View>
 
-        {/* Menú y chevron */}
+        {/* Menú */}
         <View style={styles.menuContainer}>
           <Menu>
             <MenuTrigger>
@@ -62,12 +71,11 @@ const GrupoItem = ({ grupo, onPress, onEditar, onEliminar }) => {
 
 const styles = StyleSheet.create({
   itemContainer: {
-    backgroundColor: "#fff", // fondo blanco para el item
+    backgroundColor: "#fff",
     borderRadius: 10,
     marginVertical: 6,
     marginHorizontal: 2,
     padding: 12,
-    // Sombras para iOS y Android
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,

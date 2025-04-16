@@ -25,6 +25,8 @@ import InfoModal from "../components/InfoModal";
 
 export default function HomeScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+
+  const [resumenFinanciero, setResumenFinanciero] = useState(null);
   const [grupos, setGrupos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,8 +58,19 @@ export default function HomeScreen({ navigation }) {
 
   const cargarDatos = async () => {
     setLoading(true);
-    await Promise.all([obtenerGrupos(), obtenerBalance()]);
+    await Promise.all([obtenerGrupos(), obtenerResumenFinanciero()]);
     setLoading(false);
+  };
+
+  const obtenerResumenFinanciero = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/deudas/resumen-financiero/${user.id}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      setResumenFinanciero(response.data);
+    } catch (error) {
+      console.error("Error obteniendo resumen financiero:", error);
+    }
   };
 
   const obtenerGrupos = async () => {
@@ -92,6 +105,10 @@ export default function HomeScreen({ navigation }) {
     await cargarDatos();
     setRefreshing(false);
   };
+
+  const balanceCalculado = resumenFinanciero
+  ? resumenFinanciero.total_pagado - resumenFinanciero.total_adeudado
+  : 0;
 
   const crearGrupo = async () => {
     if (!nombreGrupo.trim()) {
@@ -209,49 +226,63 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
     </View>
 
-      <BalanceCard
-        balance={balance}
-        totalAFavor={totalAFavor}
-        totalAdeudado={totalAdeudado}
-      />
-
-      <View style={styles.estadoResumen}>
-        <Ionicons
-          name={
-            balance === 0
-              ? "checkmark-circle-outline"
-              : balance > 0
-              ? "happy-outline"
-              : "trending-down-outline"
-          }
-          size={20}
-          color={balance === 0 ? "green" : balance > 0 ? "#4CAF50" : "#e53935"}
-          style={{ marginRight: 6 }}
+      {/* BalanceCard */}
+      {resumenFinanciero && (
+        <BalanceCard
+          totalAdeudado={resumenFinanciero.total_adeudado}
+          totalPagado={resumenFinanciero.total_pagado}
+          cantidadGrupos={resumenFinanciero.cantidad_grupos}
         />
-        <Text style={styles.estadoTexto}>
-          {balance === 0
-            ? "¡Todas tus deudas están saldadas! 🎉"
-            : balance > 0
-            ? "¡Estás en positivo! Tus amigos te deben dinero 😎"
-            : "Aún tienes deudas por saldar, ¡tú puedes!"}
-        </Text>
-      </View>
-      {/* <View style={styles.progressContainer}>
-  <Text style={styles.progressLabel}>Progreso de pagos:</Text>
-  <Progress.Bar
-    progress={progresoPago}
-    width={null}
-    height={10}
-    borderRadius={8}
-    color="#4CAF50"
-    unfilledColor="#E0E0E0"
-    borderWidth={0}
-  />
-  <Text style={styles.progressTexto}>
-    {Math.round(progresoPago * 100)}% del total está saldado
-  </Text>
-</View> */}
+      )}
 
+      {/* Estado resumen */}
+      {resumenFinanciero && (
+  <View style={styles.estadoResumen}>
+    <Ionicons
+      name={
+        balanceCalculado === 0
+          ? "checkmark-circle-outline"
+          : balanceCalculado > 0
+          ? "happy-outline"
+          : balanceCalculado < 500
+          ? "time-outline"
+          : balanceCalculado < 5000
+          ? "trending-down-outline"
+          : balanceCalculado < 25000
+          ? "trending-down-outline"
+          : "alert-circle-outline"
+      }
+      size={20}
+      color={
+        balanceCalculado === 0
+          ? "green"
+          : balanceCalculado > 0
+          ? "#4CAF50"
+          : balanceCalculado < 500
+          ? "#c0ca33"
+          : balanceCalculado < 25000
+          ? "#ff9800"
+          : "#e53935"
+      }
+      style={{ marginRight: 6 }}
+    />
+    <Text style={styles.estadoTexto}>
+      {balanceCalculado === 0
+        ? "¡Todas tus deudas están saldadas! 🎉"
+        : balanceCalculado > 0
+        ? "¡Estás en positivo! Tus amigos te deben dinero 😎"
+        : balanceCalculado > -500
+        ? "¡Estás a un paso de quedar al día! 💪"
+        : balanceCalculado > -5000
+        ? "Te falta muy poco, ¡ya casi! 🔜"
+        : balanceCalculado > -25000
+        ? "Estás cerca de ponerte al día 🚀"
+        : balanceCalculado > -100000
+        ? "Aún te queda camino, ¡sigue así! 🧾"
+        : "Aún tienes deudas por saldar, ¡tú puedes! ⚠️"}
+    </Text>
+  </View>
+)}
       {/* Encabezado de Grupos */}
       <View style={styles.headerGrupos}>
         <View style={styles.tituloGrupos}>

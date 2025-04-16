@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import GastoItem from "../components/GastoItem";
 import ResumenGrupo from "../components/ResumenGrupo";
 import { useFocusEffect } from "@react-navigation/native";
+import ResumenPersonalGrupo from "../components/ResumenPersonalGrupo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GrupoDetalleScreen = ({ route, navigation }) => {
@@ -159,13 +160,12 @@ const GrupoDetalleScreen = ({ route, navigation }) => {
 
       {/* Resumen financiero (opcional si ResumenGrupo se utiliza) */}
       {resumen && (
-        <ResumenGrupo
-          deudaRestante={resumen.total_adeudado}
-          porcentajePagado={porcentajePagado}
-          totalGastado={resumen.total_gastado}
-          totalPagado={resumen.total_pagado}
-        />
-      )}
+  <ResumenPersonalGrupo
+    totalAdeudadoUsuario={resumen.total_adeudado_usuario}
+    detallesDeuda={resumen.detalles_deuda}
+  />
+)}
+
 
       {/* Sección de participantes: Se muestran los mini avatares */}
       {participantes.length > 0 ? (
